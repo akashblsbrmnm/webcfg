@@ -1891,6 +1891,20 @@ int parseForceSyncJson(char *jsonpayload, char **forceSyncVal, char **forceSynct
 	return 0;
 }
 
+char * check_both(char *value) {
+	char *str = NULL;
+	if(str==NULL) {
+		str = value; // replace strncpy
+	} else if( /* str is different from value */ ){
+		// snprintf(str, ",%s", sizeof(str), value);
+	}
+	if(strchr(str, ",")) {
+		// then process by splitting the string
+		// if str has "value1,value2" format, then set_both_needed(1);
+	}
+	retrun str;
+}
+
 int set_rbus_ForceSync(char* pString, int *pStatus)
 {
     char *transactionId = NULL;
@@ -1913,10 +1927,11 @@ int set_rbus_ForceSync(char* pString, int *pStatus)
 		if(value !=NULL)
 		{
 			WebcfgDebug("After parseForceSyncJson. value %s transactionId %s\n", value, transactionId);
+			// handle and create the global string
 			webcfgStrncpy(ForceSync, value, sizeof(ForceSync));
 		}
 	}
-	WebcfgDebug("set_rbus_ForceSync . ForceSync string is %s\n", ForceSync);
+	WebcfgDebug("set_rbus_ForceSync . ForceSync string is %s\n", ForceSync);4
        
         if(value !=NULL)
 	{
