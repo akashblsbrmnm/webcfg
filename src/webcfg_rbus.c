@@ -1894,7 +1894,7 @@ int parseForceSyncJson(char *jsonpayload, char **forceSyncVal, char **forceSynct
 char * check_both(char *value) {
 	char *str = NULL;
 	if(str==NULL) {
-		str = value; // replace strncpy
+		str = value; // replace strncpy here
 	} else if( /* str is different from value */ ){
 		// snprintf(str, ",%s", sizeof(str), value);
 	}
