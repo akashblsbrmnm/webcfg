@@ -204,6 +204,7 @@ void *WebConfigMultipartTask(void *status)
 				WebcfgDebug("reset cloud_forcesync_retry_started\n");
 				set_cloud_forcesync_retry_started(0);
 			}
+			// reset both_needed and resync_count here
 		}
 
 		if(!wait_flag)
@@ -290,12 +291,15 @@ void *WebConfigMultipartTask(void *status)
 			ts.tv_sec += get_retry_timer();
 			WebcfgDebug("The retry triggers at %s\n", printTime((long long)ts.tv_sec));
 		}
-		if(get_global_webcfg_forcedsync_needed() == 1 || get_cloud_forcesync_retry_needed() == 1)
+		if(get_global_webcfg_forcedsync_needed() == 1 || get_cloud_forcesync_retry_needed() == 1 || ( get_both_needed() == 1 ))
 		{
 			if(get_cloud_forcesync_retry_needed() == 1)
 			{
 				WebcfgInfo("Cloud force sync in progress is detected, trigger force sync with cloud.\n");
 			}
+			// else if( get_cloud_primary_forcesync_retry_needed() == 1) {
+			// 	WebcfgInfo("Primary force sync in progress is detected, trigger force sync with cloud.\n");
+			// }
 			else
 			{
 				WebcfgInfo("webcfg_forcedsync detected, trigger force sync with cloud.\n");
@@ -315,7 +319,7 @@ void *WebConfigMultipartTask(void *status)
 		}
 		else 
 		{
-			rv = pthread_cond_wait(&sync_condition, &sync_mutex);
+			rv = pthread_cond_wait(&sync_condition, &sync_mutex); 
 		}
 		if(!rv && !g_shutdown)
 		{
@@ -336,9 +340,21 @@ void *WebConfigMultipartTask(void *status)
 			}
 			char *ForceSyncDoc = NULL;
 			char* ForceSyncTransID = NULL;
-
-			// Identify ForceSync based on docname
-			getForceSync(&ForceSyncDoc, &ForceSyncTransID);
+			if(both_needed() == 1 && count<2) {
+				if(count==1) { // forcesync for telemetry
+					syncDoc = "telemetry";
+				}
+				
+				forced_sync = 1;
+				wait_flag = 1;
+				count++; // in case of root, count is now 1 before continue;
+							// In case of telemetry, count is now 2 before continue;
+				continue;
+			} else {
+				// Identify ForceSync based on docname
+				getForceSync(&ForceSyncDoc, &ForceSyncTransID);
+			}
+			
 			if(ForceSyncDoc !=NULL && ForceSyncTransID !=NULL)
 			{
 				WebcfgInfo("ForceSyncDoc %s ForceSyncTransID. %s\n", ForceSyncDoc, ForceSyncTransID);
