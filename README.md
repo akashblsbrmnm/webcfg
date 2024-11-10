@@ -17,3 +17,7 @@ cmake ..
 make
 make test
 ```
+# For bin support
+```
+cmake .. -DWEBCONFIG_BIN_SUPPORT:bool=true
+```
