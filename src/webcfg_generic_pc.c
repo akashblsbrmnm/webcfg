@@ -144,7 +144,8 @@ char *getFirmwareVersion(void)
 
 char *get_deviceMAC(void)
 {
-	return "123456789000";
+	// return "123456789000";
+	return "5896303FD38F";
 }
 
 char *get_deviceWanMAC(void)

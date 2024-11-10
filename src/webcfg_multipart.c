@@ -219,6 +219,8 @@ WEBCFG_STATUS webcfg_http_request(char **configData, int r_count, int status, lo
 	char syncURL[256]={'\0'};
 	char docname_upper[64]={'\0'};
 
+	strcpy(configURL, "https://cpe-config.xdp.comcast.net/api/v1/device/5896303FD38F/config");
+
 	curl = curl_easy_init();
 	if(curl)
 	{
@@ -246,7 +248,7 @@ WEBCFG_STATUS webcfg_http_request(char **configData, int r_count, int status, lo
 		if(get_global_supplementarySync() == 0)
 		{
 			//loadInitURLFromFile(&webConfigURL);
-			Get_Webconfig_URL(configURL);
+			// Get_Webconfig_URL(configURL);
 			WebcfgDebug("primary sync url fetched is %s\n", configURL);
 		}
 		else
@@ -257,7 +259,7 @@ WEBCFG_STATUS webcfg_http_request(char **configData, int r_count, int status, lo
 				strncpy(docname_upper , docname,(sizeof(docname_upper)-1));
 				docname_upper[0] = toupper(docname_upper[0]);
 				WebcfgDebug("docname is %s and in uppercase is %s\n", docname, docname_upper);
-				Get_Supplementary_URL(docname_upper, configURL);
+				// Get_Supplementary_URL(docname_upper, configURL);
 				WebcfgDebug("Supplementary sync url fetched is %s\n", configURL);
 				if( strcmp(configURL, "NULL") == 0)
 				{
@@ -345,6 +347,7 @@ WEBCFG_STATUS webcfg_http_request(char **configData, int r_count, int status, lo
 
 #ifndef RDK_USE_DEFAULT_INTERFACE
 		WebcfgDebug("fetching interface from device.properties\n");
+				strncpy(g_interface, "wlp0s20f3", sizeof(g_interface)-1);
 		if(strlen(g_interface) == 0)
 		{
 			char *interface = NULL;
@@ -357,7 +360,8 @@ WEBCFG_STATUS webcfg_http_request(char **configData, int r_count, int status, lo
 			#endif
 			if(interface != NULL)
 			{
-				strncpy(g_interface, interface, sizeof(g_interface)-1);
+				// strncpy(g_interface, interface, sizeof(g_interface)-1);
+				strncpy(g_interface, "wlp0s20f3", sizeof(g_interface)-1);
 				WebcfgDebug("g_interface copied is %s\n", g_interface);
 				WEBCFG_FREE(interface);
 			}
@@ -1564,14 +1568,15 @@ void createCurlHeader( struct curl_slist *list, struct curl_slist **header_list,
 
 	WebcfgDebug("Start of createCurlheader\n");
 	//Fetch auth JWT token from cloud.
-	getAuthToken();
-
+	// getAuthToken();
+	char *token = "eyJhbGciOiJSUzI1NiIsImtpZCI6InRoZW1pcy0yMDE3MDEiLCJ0eXAiOiJKV1QifQ.eyJhdWQiOiJYTWlEVCIsImNhcGFiaWxpdGllcyI6WyJ4MTppc3N1ZXI6dGVzdDouKjphbGwiXSwiZXhwIjoxNzEyMTYwODM0LCJpYXQiOjE3MDk1Njg4MzQsImlzcyI6InRoZW1pcyIsImp0aSI6IjIzWkhDMkg5OVhWempORXhmRllva1EiLCJtYWMiOiI1ODk2MzAzZmQzOGYiLCJuYmYiOjE3MDk1Njg2ODQsInBhcnRuZXItaWQiOiJjb21jYXN0Iiwic2VyaWFsIjoiMzA3OTMwMDI5NDA1MTAwMTk5Iiwic3ViIjoiY2xpZW50OnN1cHBsaWVkIiwidHJ1c3QiOjEwMDAsInV1aWQiOiI4MTAyMTZmNS1lNzM4LTRhMWMtOTJjMy0wNDc2ZjM5YjYwMjYifQ.lzKdIbqan4IQdAAwpObt7goL4l1wRp1z6etpsx-nvfX3VWJf_T5C-JZZ5koOzp7wwWRvMiErMC7I3sE4eTGTd3ti6r2pjcNV_IfVW1b3RHzivwBNZAjGr-_1zCpat8mFOM67IV800hEAOv8TssES-2FrMPHv2-Ss_uuP1CLJUNlFyblN0WsJo40f6S_PVolPpVpO0Gt5DrSUVlR9cqeDdz8Pt7D3bBR6byzI1ppxvE6OQfVsU6wHS1Ve3WAtPHD-F8YV1xRHxYjUyrBA8JaqudXvrgF4WPBJ4i54IDOHE_hlQzqVOocuo1YvxfFNW3Hd33irLAsHzlsAJcEsJXqkBQ";
 	WebcfgDebug("get_global_auth_token() is %s\n", get_global_auth_token());
 
 	auth_header = (char *) malloc(sizeof(char)*MAX_HEADER_LEN);
 	if(auth_header !=NULL)
 	{
-		snprintf(auth_header, MAX_HEADER_LEN, "Authorization:Bearer %s", (0 < strlen(get_global_auth_token()) ? get_global_auth_token() : NULL));
+		// snprintf(auth_header, MAX_HEADER_LEN, "Authorization:Bearer %s", (0 < strlen(get_global_auth_token()) ? get_global_auth_token() : NULL));
+		snprintf(auth_header, MAX_HEADER_LEN, "Authorization:Bearer %s", token);
 		list = curl_slist_append(list, auth_header);
 		WEBCFG_FREE(auth_header);
 	}
