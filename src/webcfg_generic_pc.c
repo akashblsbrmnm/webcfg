@@ -128,7 +128,8 @@ char *getAccountID(void)
 
 char *getRebootReason(void)
 {
-    char *reboot=strdup("Forced_Software_upgrade");
+    // char *reboot=strdup("Forced_Software_upgrade");
+	char *reboot = strdup("Test");
     return reboot;
 }
 
@@ -144,7 +145,8 @@ char *getFirmwareVersion(void)
 
 char *get_deviceMAC(void)
 {
-	return "123456789000";
+	// return "123456789000";
+	return "e4bffaffd9ca";
 }
 
 char *get_deviceWanMAC(void)

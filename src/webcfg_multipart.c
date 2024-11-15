@@ -246,7 +246,8 @@ WEBCFG_STATUS webcfg_http_request(char **configData, int r_count, int status, lo
 		if(get_global_supplementarySync() == 0)
 		{
 			//loadInitURLFromFile(&webConfigURL);
-			Get_Webconfig_URL(configURL);
+			// Get_Webconfig_URL(configURL);
+			strcpy(configURL, "https://cpe-config.xdp.comcast.net/api/v1/device/e4bffaffd9ca/config");
 			WebcfgDebug("primary sync url fetched is %s\n", configURL);
 		}
 		else
@@ -257,8 +258,9 @@ WEBCFG_STATUS webcfg_http_request(char **configData, int r_count, int status, lo
 				strncpy(docname_upper , docname,(sizeof(docname_upper)-1));
 				docname_upper[0] = toupper(docname_upper[0]);
 				WebcfgDebug("docname is %s and in uppercase is %s\n", docname, docname_upper);
-				Get_Supplementary_URL(docname_upper, configURL);
-				WebcfgDebug("Supplementary sync url fetched is %s\n", configURL);
+				// Get_Supplementary_URL(docname_upper, configURL);
+				strcpy(configURL, "https://cpe-profile.xdp.comcast.net/api/v1/device/e4bffaffd9ca/config");
+				WebcfgDebug("Supplementary sync url fetched is .... %s\n", configURL);
 				if( strcmp(configURL, "NULL") == 0)
 				{
 					WebcfgInfo("Supplementary sync with cloud is disabled as configURL is NULL\n");
@@ -345,6 +347,7 @@ WEBCFG_STATUS webcfg_http_request(char **configData, int r_count, int status, lo
 
 #ifndef RDK_USE_DEFAULT_INTERFACE
 		WebcfgDebug("fetching interface from device.properties\n");
+		strncpy(g_interface, "wlp0s20f3", sizeof(g_interface)-1);
 		if(strlen(g_interface) == 0)
 		{
 			char *interface = NULL;
@@ -357,7 +360,8 @@ WEBCFG_STATUS webcfg_http_request(char **configData, int r_count, int status, lo
 			#endif
 			if(interface != NULL)
 			{
-				strncpy(g_interface, interface, sizeof(g_interface)-1);
+				// strncpy(g_interface, interface, sizeof(g_interface)-1);
+				strncpy(g_interface, "wlp0s20f3", sizeof(g_interface)-1);
 				WebcfgDebug("g_interface copied is %s\n", g_interface);
 				WEBCFG_FREE(interface);
 			}
@@ -1564,14 +1568,16 @@ void createCurlHeader( struct curl_slist *list, struct curl_slist **header_list,
 
 	WebcfgDebug("Start of createCurlheader\n");
 	//Fetch auth JWT token from cloud.
-	getAuthToken();
-
+	// getAuthToken();
+	char *token = "eyJhbGciOiJSUzI1NiIsImtpZCI6InRoZW1pcy0yMDE3MDEiLCJ0eXAiOiJKV1QifQ.eyJhdWQiOiJYTWlEVCIsImNhcGFiaWxpdGllcyI6WyJ4MTppc3N1ZXI6dGVzdDouKjphbGwiXSwiZXhwIjoxNzMzMzE4MTIyLCJpYXQiOjE3MzA3MjYxMjIsImlzcyI6InRoZW1pcyIsImp0aSI6ImRnOFZ3TlRJTHc5amNHSUxJRnBVN0EiLCJtYWMiOiJlNGJmZmFmZmQ5Y2EiLCJuYmYiOjE3MzA3MjU5NzIsInBhcnRuZXItaWQiOiJjb21jYXN0Iiwic2VyaWFsIjoiMzQ4OTY3MDAxMTE0MDAwMDM0Iiwic3ViIjoiY2xpZW50OnN1cHBsaWVkIiwidHJ1c3QiOjEwMDAsInV1aWQiOiI1NzZjM2ZkNi1hNzY0LTQyNGItYjA0ZC0wYTQ3OTU5ZGI0ODIifQ.JTCNoL3_85fAGxR4VHIYMAVyaOvW6JFlNa_gbuPpQ0ixQSLaUItxN_iHB5Uj-NZR4WSuq_-ahoaZ88ym7pM-g8JO_LjdpEnnGgAib6yqnkrLMLzCdBqRmI2F1D3i34faJG9tnvE1LZjieCo2sWs5V8uKdeRBLHoPNn5Jy2aGw1lUn2j4V4cSOzXaouHl96uwufEClW3qNlFdnCTFyEa58dYo5QMM2-9gzndYsVTQ87B17ErAr-1fkai5MV2PHiU2t0WbKgVrksxbRDnDUOZP2ak0RgcnllTLf3Xj129QL7y70XT1hfXju1mEDOIrsdFKE58ZFRi-06IbpcgrcfKDfA";
 	WebcfgDebug("get_global_auth_token() is %s\n", get_global_auth_token());
 
 	auth_header = (char *) malloc(sizeof(char)*MAX_HEADER_LEN);
 	if(auth_header !=NULL)
 	{
-		snprintf(auth_header, MAX_HEADER_LEN, "Authorization:Bearer %s", (0 < strlen(get_global_auth_token()) ? get_global_auth_token() : NULL));
+		// snprintf(auth_header, MAX_HEADER_LEN, "Authorization:Bearer %s", (0 < strlen(get_global_auth_token()) ? get_global_auth_token() : NULL));
+		snprintf(auth_header, MAX_HEADER_LEN, "Authorization:Bearer %s", token);
+		WebcfgDebug("[DEBUG] get_global_auth_token() is %s\n", auth_header);
 		list = curl_slist_append(list, auth_header);
 		WEBCFG_FREE(auth_header);
 	}
@@ -2478,7 +2484,8 @@ void failedDocsRetry()
 
 				//To get the exact time diff for retry from present time do the below
 				time_diff = updateRetryTimeDiff(temp->retry_timestamp);
-				WebcfgDebug("The docname is %s and diff is %d retry time stamp is %s\n", temp->name, time_diff, printTime(temp->retry_timestamp));
+				// WebcfgDebug("The docname is %s and diff is %d retry time stamp is %s\n", temp->name, time_diff, printTime(temp->retry_timestamp));
+				WebcfgInfo("The docname is %s and diff is %d retry time stamp is %s\n", temp->name, time_diff, printTime(temp->retry_timestamp));
 				set_doc_fail(1);
 			}
 		}

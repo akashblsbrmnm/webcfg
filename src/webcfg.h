@@ -115,4 +115,6 @@ void set_cloud_forcesync_retry_needed(int value);
 int get_cloud_forcesync_retry_needed();
 void set_cloud_forcesync_retry_started(int value);
 int get_cloud_forcesync_retry_started();
+void set_global_both_forcesync_needed(int value);
+int get_global_both_forcesync_needed();
 #endif

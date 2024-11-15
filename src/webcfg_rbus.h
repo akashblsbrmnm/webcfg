@@ -137,6 +137,7 @@ rbusError_t resetEventSubHandler(rbusHandle_t handle, rbusEventSubAction_t actio
 void rbus_log_handler(rbusLogLevel level, const char* file, int line, int threadId, char* message);
 webcfgError_t checkSubdocInDb(char *docname);
 webcfgError_t resetSubdocVersion(char *docname);
+WEBCFG_STATUS processWebcfgForceSyncValue(char *value);
 #ifdef WAN_FAILOVER_SUPPORTED
 int subscribeTo_CurrentActiveInterface_Event();
 #endif

@@ -82,6 +82,7 @@ static int g_webcfg_forcedsync_started = 0;
 
 static int g_cloud_forcesync_retry_needed = 0;
 static int g_cloud_forcesync_retry_started = 0;
+static int g_bothSync_needed = 0;
 /*----------------------------------------------------------------------------*/
 /*                             Function Prototypes                            */
 /*----------------------------------------------------------------------------*/
@@ -122,6 +123,9 @@ void *WebConfigMultipartTask(void *status)
 	time_t t;
 	struct timespec ts;
 	Status = (unsigned long)status;
+	int force_sync_count = 0;
+	char *tempForceSyncDoc = NULL;
+			char *nextSubDoc = NULL;
 
 	initWebcfgProperties(WEBCFG_PROPERTIES_FILE);
 
@@ -261,7 +265,7 @@ void *WebConfigMultipartTask(void *status)
 
 		retry_flag = get_doc_fail();
 		WebcfgDebug("The retry flag value is %d\n", retry_flag);
-
+		retry_flag = 0; // FOR_TESTING
 		if ( retry_flag == 0)
 		{
 		//To disable supplementary sync for RDKV platforms
@@ -336,9 +340,70 @@ void *WebConfigMultipartTask(void *status)
 			}
 			char *ForceSyncDoc = NULL;
 			char* ForceSyncTransID = NULL;
+			
 
-			// Identify ForceSync based on docname
-			getForceSync(&ForceSyncDoc, &ForceSyncTransID);
+			if( force_sync_count!=1 )
+			{
+				// Identify ForceSync based on docname
+				getForceSync(&tempForceSyncDoc, &ForceSyncTransID);
+
+			}
+			
+			if (tempForceSyncDoc != NULL || nextSubDoc!=NULL)
+			{
+				WebcfgInfo("[DEBUG] force_sync_count is %d\n", force_sync_count);
+				WebcfgInfo("[DEBUG] tempForceSync is %s\n", tempForceSyncDoc);
+
+
+				if (strcmp(tempForceSyncDoc, "root,telemetry") == 0) {
+					// Handle "root,telemetry"
+					WebcfgInfo("[DEBUG] Processing first subdoc value\n");
+					char *token = strtok(tempForceSyncDoc, ",");
+					if (token != NULL) {
+						ForceSyncDoc = strdup(token);
+						WebcfgInfo("[DEBUG] Updated ForceSyncDoc value is [%s]\n", ForceSyncDoc);
+						wait_flag = 1;
+						forced_sync = 1;
+						WebcfgInfo("[DEBUG] The value tempForceSyncDoc: %s\n", tempForceSyncDoc);
+						token = strtok(NULL, ",");
+						if (token != NULL) {
+							nextSubDoc = strdup(token);
+						}
+						WebcfgInfo("[DEBUG] The value next to be processed: %s\n", nextSubDoc);
+					force_sync_count++;
+						// continue;
+
+						
+					}
+					set_global_webcfg_forcedsync_needed(1);
+					printf("[DEBUG] setting global_webcfg_forcedsync_needed as 1\n");
+				}
+				else if (force_sync_count == 1 && nextSubDoc != NULL)
+				{
+					WebcfgInfo("[DEBUG] THE STRING HAS TWO VALUES .. PROCESSING THE SECOND ONE\n");
+					if (ForceSyncDoc != NULL) {
+						free(ForceSyncDoc);
+					}
+					ForceSyncDoc = strdup(nextSubDoc);
+					WebcfgInfo("[DEBUG] ForceSyncDoc value is now (2nd) [%s]\n", ForceSyncDoc);
+					free(nextSubDoc);
+					nextSubDoc = NULL;
+					force_sync_count = 0;
+					ForceSyncTransID = "NA"; // trans_id ?
+				}
+				else
+				{
+					// Handle Single case
+					WebcfgInfo("[DEBUG] JUST ONE VALUE\n");
+					ForceSyncDoc = strdup(tempForceSyncDoc);
+					WebcfgInfo("Updated ForceSyncDoc value is [%s]\n", ForceSyncDoc);
+				}
+
+				WebcfgInfo("[DEBUG] Final force_sync_count value is [%d]\n", force_sync_count);
+			}
+			
+				WebcfgInfo("ForceSyncDoc %s ForceSyncTransID. %s\n", ForceSyncDoc, ForceSyncTransID);
+			
 			if(ForceSyncDoc !=NULL && ForceSyncTransID !=NULL)
 			{
 				WebcfgInfo("ForceSyncDoc %s ForceSyncTransID. %s\n", ForceSyncDoc, ForceSyncTransID);
@@ -349,7 +414,8 @@ void *WebConfigMultipartTask(void *status)
 				{
 					forced_sync = 1;
 					wait_flag = 1;
-					WebcfgDebug("Received signal interrupt to Force Sync\n");
+					// WebcfgDebug("Received signal interrupt to Force Sync\n");
+					WebcfgDebug("Received signal interrupt to Force Sync (value:%s)\n", ForceSyncDoc);
 
 					//To check poke string received is supplementary doc or not.
 					if(isSupplementaryDoc(ForceSyncDoc) == WEBCFG_SUCCESS)
@@ -360,7 +426,7 @@ void *WebConfigMultipartTask(void *status)
 						WebcfgDebug("syncDoc is %s\n", syncDoc);
 					}
 					WEBCFG_FREE(ForceSyncDoc);
-					WEBCFG_FREE(ForceSyncTransID);
+					// WEBCFG_FREE(ForceSyncTransID);
 				}
 				else
 				{
@@ -584,6 +650,16 @@ void set_cloud_forcesync_retry_started(int value)
 int get_cloud_forcesync_retry_started()
 {
     return g_cloud_forcesync_retry_started;
+}
+
+void set_global_both_forcesync_needed(int value)
+{
+    g_bothSync_needed = value;
+}
+
+int get_global_both_forcesync_needed()
+{
+    return g_bothSync_needed;
 }
 /*----------------------------------------------------------------------------*/
 /*                             Internal functions                             */

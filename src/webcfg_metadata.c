@@ -326,6 +326,9 @@ WEBCFG_STATUS isSupplementaryDoc(char *subDoc)
 	SupplementaryDocs_t *sp = NULL;
 	sp = get_global_spInfoHead();
 
+	if(strcmp(subDoc, "telemetry")==0){
+		return WEBCFG_SUCCESS;
+	}
 	while(sp != NULL)
 	{
 		WebcfgDebug("Supplementary check for docname %s, subDoc received is %s\n", sp->name, subDoc);

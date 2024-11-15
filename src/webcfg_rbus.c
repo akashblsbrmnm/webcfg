@@ -49,6 +49,7 @@ static char* BinDataVal = NULL ;
 static char *paramRFCEnable = "eRT.com.cisco.spvtg.ccsp.webpa.WebConfigRfcEnable";
 
 static char ForceSync[256]={'\0'};
+static char ForceSyncGlobalString[256]={'\0'};
 static char ForceSyncTransID[256]={'\0'};
 
 static int subscribed = 0;
@@ -1891,6 +1892,59 @@ int parseForceSyncJson(char *jsonpayload, char **forceSyncVal, char **forceSynct
 	return 0;
 }
 
+WEBCFG_STATUS processWebcfgForceSyncValue(char *value)
+{
+    if (!value || strlen(value) == 0)
+    {
+        printf("Invalid Force Sync Value: [%s]\n", value);
+        return WEBCFG_FAILURE;
+    }
+
+    // If ForceSyncGlobalString is empty, copy the value directly
+    if (strlen(ForceSyncGlobalString) == 0)
+    {
+        strncpy(ForceSyncGlobalString, value, sizeof(ForceSyncGlobalString) - 1);
+        return WEBCFG_SUCCESS;
+    }
+
+    // If "root,telemetry" is received, copy it to ForceSyncGlobalString and return
+    if (strcmp(value, "root,telemetry") == 0)
+    {
+        strncpy(ForceSyncGlobalString, value, sizeof(ForceSyncGlobalString) - 1);
+        return WEBCFG_SUCCESS;
+    }
+
+    // If ForceSyncGlobalString is "root" and "telemetry" is received, set to "root,telemetry"
+    if (strcmp(ForceSyncGlobalString, "root") == 0 && strcmp(value, "telemetry") == 0)
+    {
+        strncpy(ForceSyncGlobalString, "root,telemetry", sizeof(ForceSyncGlobalString) - 1);
+        return WEBCFG_SUCCESS;
+    }
+    // If ForceSyncGlobalString is "telemetry" and "root" is received, set to "root,telemetry"
+    else if (strcmp(ForceSyncGlobalString, "telemetry") == 0 && strcmp(value, "root") == 0)
+    {
+        strncpy(ForceSyncGlobalString, "root,telemetry", sizeof(ForceSyncGlobalString) - 1);
+        return WEBCFG_SUCCESS;
+    }
+    
+    // If the ForceSyncGlobalString is "root,telemetry", overwrite with the new single value
+    if (strcmp(ForceSyncGlobalString, "root,telemetry") == 0 && strchr(value, ',') == NULL)
+    {
+        if (strcmp(value, "telemetry") == 0)
+        {
+            strncpy(ForceSyncGlobalString, "telemetry", sizeof(ForceSyncGlobalString) - 1);
+            return true;
+        }
+        else if (strcmp(value, "root") == 0)
+        {
+            strncpy(ForceSyncGlobalString, "root", sizeof(ForceSyncGlobalString) - 1);
+            return true;
+        }
+    }
+
+    return WEBCFG_FAILURE;
+}
+
 int set_rbus_ForceSync(char* pString, int *pStatus)
 {
     char *transactionId = NULL;
@@ -1913,7 +1967,11 @@ int set_rbus_ForceSync(char* pString, int *pStatus)
 		if(value !=NULL)
 		{
 			WebcfgDebug("After parseForceSyncJson. value %s transactionId %s\n", value, transactionId);
-			webcfgStrncpy(ForceSync, value, sizeof(ForceSync));
+			if(processWebcfgForceSyncValue(value) == WEBCFG_SUCCESS)
+			{
+				printf("[DEBUG] processWebcfgForceSyncValue returned WEBCFG_SUCCESS\n");
+				webcfgStrncpy(ForceSync, ForceSyncGlobalString, sizeof(ForceSync));
+			}
 		}
 	}
 	WebcfgDebug("set_rbus_ForceSync . ForceSync string is %s\n", ForceSync);

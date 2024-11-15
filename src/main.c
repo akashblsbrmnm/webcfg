@@ -110,7 +110,9 @@ int main()
 		WebcfgInfo("Registering WanEventHandler sysevents\n");
 		WanEventHandler();
 		// wait for upstream subscriber for 5mins
-		waitForUpstreamEventSubscribe(300);
+		// waitForUpstreamEventSubscribe(300);
+		waitForUpstreamEventSubscribe(5);
+		webcfgStrncpy(RfcEnable,"true", sizeof(RfcEnable));
 		ret = rbus_GetValueFromDB( PARAM_RFC_ENABLE, &strValue );
 		if (ret == 0)
 		{
