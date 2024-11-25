@@ -346,6 +346,24 @@ void *WebConfigMultipartTask(void *status)
 
 			// Identify ForceSync based on docname
 			getForceSync(&ForceSyncDoc, &ForceSyncTransID);
+
+			if (force_sync_count != 1)
+			{
+				getForceSync(&ForceSyncDoc, &ForceSyncTransID);
+			}
+
+			WebcfgInfo("ForceSync value in main thread , after getForceSync is: %s\n", ForceSyncDoc);
+			// if ForceSyncDoc is in format str1,str2 .. then split 
+			if(strcmp(PRIMARY_SUPPLEMENTARY_BUNDLE, ForceSyncDoc) == 0) 
+			{
+				if (handleForceSyncRequest(&ForceSyncDoc, &nextSubDoc, &force_sync_count) == WEBCFG_SUCCESS)
+				{
+					WebcfgInfo("handleForceSyncRequest returned success\n");
+					WebcfgInfo("ForceSync value in main thread is: %s\n", ForceSyncDoc);
+					WebcfgInfo("[main] The value of force_sync_count is %d\n", force_sync_count);
+				}
+			}
+
 			if(ForceSyncDoc !=NULL && ForceSyncTransID !=NULL)
 			{
 				WebcfgInfo("ForceSyncDoc %s ForceSyncTransID. %s\n", ForceSyncDoc, ForceSyncTransID);
@@ -940,4 +958,65 @@ void JoinThread (pthread_t threadId)
 	{
 		WebcfgError("Error joining thread threadId\n");
 	}
+}
+
+WEBCFG_STATUS handleForceSyncRequest(char **ForceSyncDoc, char **nextSubDoc, int *force_sync_count)
+{
+    WebcfgInfo("[handleForceSyncRequest] handleForceSyncRequest initial state: ForceSyncDoc=%s, nextSubDoc=%s, force_sync_count=%d\n",
+               *ForceSyncDoc ? *ForceSyncDoc : "NULL",
+               *nextSubDoc ? *nextSubDoc : "NULL",
+               *force_sync_count);
+
+    if (*ForceSyncDoc != NULL || *nextSubDoc != NULL)
+    {
+        if (*ForceSyncDoc != NULL && strcmp(*ForceSyncDoc, PRIMARY_SUPPLEMENTARY_BUNDLE) == 0)
+        {
+            char *tempForceSync = strdup(*ForceSyncDoc);
+            if (tempForceSync == NULL)
+            {
+                WebcfgError("Memory allocation failed for tempForceSync\n");
+                return WEBCFG_FAILURE;
+            }
+
+            char *token = strtok(tempForceSync, ",");
+            if (token != NULL)
+            {
+                free(*ForceSyncDoc);
+                *ForceSyncDoc = strdup(token); // root
+
+                token = strtok(NULL, ",");
+                if (token != NULL)
+                {
+                    free(*nextSubDoc);
+                    *nextSubDoc = strdup(token); // nextDoc = telemetry
+                }
+
+                *force_sync_count = 1;
+				set_cloud_forcesync_retry_needed(1);
+                WebcfgInfo("[handleForceSyncRequest] Updated ForceSyncDoc=%s, nextSubDoc=%s, force_sync_count=%d\n",
+                           *ForceSyncDoc, *nextSubDoc ? *nextSubDoc : "NULL", *force_sync_count);
+            }
+            free(tempForceSync);
+        }
+        else if (*force_sync_count == 1 && *nextSubDoc != NULL)
+        {
+            free(*ForceSyncDoc);
+            *ForceSyncDoc = strdup(*nextSubDoc);
+            free(*nextSubDoc);
+            *nextSubDoc = NULL;
+            *force_sync_count = 0;
+            WebcfgInfo("[handleForceSyncRequest] Processing queued doc: %s\n", *ForceSyncDoc);
+        }
+        else if (*ForceSyncDoc != NULL)
+        {
+            WebcfgInfo("[handleForceSyncRequest] Processing single doc: %s\n", *ForceSyncDoc);
+        }
+
+        return WEBCFG_SUCCESS;
+    }
+    else
+    {
+        WebcfgInfo("[handleForceSyncRequest] ForceSync value is Invalid\n");
+    }
+    return WEBCFG_FAILURE;
 }
