@@ -43,6 +43,8 @@ extern int numLoops;
 #define FOREVER()   numLoops--
 #endif
 
+extern char ForceSyncGlobalString[256];
+#define PRIMARY_SUPPLEMENTARY_BUNDLE "root,telemetry"
 /*----------------------------------------------------------------------------*/
 /*                               Data Structures                              */
 /*----------------------------------------------------------------------------*/

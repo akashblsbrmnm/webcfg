@@ -51,6 +51,8 @@ static char *paramRFCEnable = "eRT.com.cisco.spvtg.ccsp.webpa.WebConfigRfcEnable
 static char ForceSync[256]={'\0'};
 static char ForceSyncTransID[256]={'\0'};
 
+char ForceSyncGlobalString[256] = {'\0'};
+
 static int subscribed = 0;
 
 #ifdef WAN_FAILOVER_SUPPORTED
@@ -1891,6 +1893,29 @@ int parseForceSyncJson(char *jsonpayload, char **forceSyncVal, char **forceSynct
 	return 0;
 }
 
+WEBCFG_STATUS processWebcfgForceSyncValue(char *value)
+{
+    if (!value || strlen(value) == 0)
+    {
+        printf("Invalid Force Sync Value: [%s]\n", value ? value : "NULL");
+        return WEBCFG_FAILURE;
+    }
+
+    if ((strcmp(ForceSyncGlobalString, "root") == 0 && strcmp(value, "telemetry") == 0) ||
+        (strcmp(ForceSyncGlobalString, "telemetry") == 0 && strcmp(value, "root") == 0))
+    {
+        webcfgStrncpy(ForceSyncGlobalString, PRIMARY_SUPPLEMENTARY_BUNDLE, sizeof(ForceSyncGlobalString));
+        return WEBCFG_SUCCESS;
+    }
+    else if (strcmp(ForceSyncGlobalString, value) != 0)
+    {
+        webcfgStrncpy(ForceSyncGlobalString, value, sizeof(ForceSyncGlobalString));
+        return WEBCFG_SUCCESS;
+    }
+
+    return WEBCFG_SUCCESS;
+}
+
 int set_rbus_ForceSync(char* pString, int *pStatus)
 {
     char *transactionId = NULL;
@@ -1913,6 +1938,19 @@ int set_rbus_ForceSync(char* pString, int *pStatus)
 		if(value !=NULL)
 		{
 			WebcfgDebug("After parseForceSyncJson. value %s transactionId %s\n", value, transactionId);
+			if(strcmp(PRIMARY_SUPPLEMENTARY_BUNDLE, value) == 0) 
+			{
+				if(processWebcfgForceSyncValue(value) == WEBCFG_SUCCESS)
+				{
+					printf("[DEBUG] processWebcfgForceSyncValue returned WEBCFG_SUCCESS\n");
+					WebcfgDebug("processWebcfgForceSyncValue returned: %s\n", ForceSyncGlobalString);
+					// if(strcmp(ForceSyncGlobalString, PRIMARY_SUPPLEMENTARY_BUNDLE) == 0)
+					// {
+					// 	set_cloud_forcesync_retry_needed(1);
+					// // }
+					// 
+				}
+			}
 			webcfgStrncpy(ForceSync, value, sizeof(ForceSync));
 		}
 	}

@@ -122,6 +122,8 @@ void *WebConfigMultipartTask(void *status)
 	time_t t;
 	struct timespec ts;
 	Status = (unsigned long)status;
+	int force_sync_count = 0;
+	char *nextSubDoc = NULL;
 
 	initWebcfgProperties(WEBCFG_PROPERTIES_FILE);
 
@@ -299,6 +301,11 @@ void *WebConfigMultipartTask(void *status)
 			else
 			{
 				WebcfgInfo("webcfg_forcedsync detected, trigger force sync with cloud.\n");
+			}
+			if(strcmp(ForceSyncGlobalString,PRIMARY_SUPPLEMENTARY_BUNDLE) == 0)
+			{
+					// syncDoc = NULL;
+					// get the root. if root, then
 			}
 			forced_sync = 1;
 			wait_flag = 1;
