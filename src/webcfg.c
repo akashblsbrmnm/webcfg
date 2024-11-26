@@ -302,11 +302,11 @@ void *WebConfigMultipartTask(void *status)
 			{
 				WebcfgInfo("webcfg_forcedsync detected, trigger force sync with cloud.\n");
 			}
-			if(strcmp(ForceSyncGlobalString,PRIMARY_SUPPLEMENTARY_BUNDLE) == 0)
-			{
-					// syncDoc = NULL;
-					// get the root. if root, then
-			}
+			// if(strcmp(ForceSyncGlobalString,PRIMARY_SUPPLEMENTARY_BUNDLE) == 0)
+			// {
+			// 		// syncDoc = NULL;
+			// 		// get the root. if root, then
+			// }
 			forced_sync = 1;
 			wait_flag = 1;
 			rv = 0;

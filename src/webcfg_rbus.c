@@ -1893,26 +1893,39 @@ int parseForceSyncJson(char *jsonpayload, char **forceSyncVal, char **forceSynct
 	return 0;
 }
 
-WEBCFG_STATUS processWebcfgForceSyncValue(char *value)
+WEBCFG_STATUS processWebcfgForceSyncValue(const char *value)
 {
-    if (!value || strlen(value) == 0)
+    // Input validation
+    if (!value || *value == '\0')
     {
-        printf("Invalid Force Sync Value: [%s]\n", value ? value : "NULL");
+        WebcfgDebug("Invalid Force Sync Value: [%s]\n", value ? value : "NULL");
+        WebcfgDebug("ForceSyncGlobalString: %s\n", ForceSyncGlobalString);
         return WEBCFG_FAILURE;
     }
-
-    if ((strcmp(ForceSyncGlobalString, "root") == 0 && strcmp(value, "telemetry") == 0) ||
-        (strcmp(ForceSyncGlobalString, "telemetry") == 0 && strcmp(value, "root") == 0))
+	
+    /* 
+         No update needed if ForceSyncGlobalString is alreayd set to PRIMARY_SUPPLEMENTARY_BUNDLE
+         Or
+         ForceSyncGlobalString is equal to `value`.
+    */
+    if (strcmp(ForceSyncGlobalString, PRIMARY_SUPPLEMENTARY_BUNDLE) == 0 || strcmp(ForceSyncGlobalString, value) == 0)
     {
-        webcfgStrncpy(ForceSyncGlobalString, PRIMARY_SUPPLEMENTARY_BUNDLE, sizeof(ForceSyncGlobalString));
+        WebcfgDebug("No update needed.\n");
+        WebcfgDebug("ForceSyncGlobalString: %s\n", ForceSyncGlobalString);
         return WEBCFG_SUCCESS;
     }
-    else if (strcmp(ForceSyncGlobalString, value) != 0)
+
+    // Handle the combined string
+    if ((strcmp(value, "telemetry") == 0 && strcmp(ForceSyncGlobalString, "root") == 0) ||
+        (strcmp(value, "root") == 0 && strcmp(ForceSyncGlobalString, "telemetry") == 0))
     {
-        webcfgStrncpy(ForceSyncGlobalString, value, sizeof(ForceSyncGlobalString));
+        WebcfgDebug(ForceSyncGlobalString, PRIMARY_SUPPLEMENTARY_BUNDLE, sizeof(ForceSyncGlobalString));
+        WebcfgDebug("Updated to combined bundle: [%s]\n", ForceSyncGlobalString);
         return WEBCFG_SUCCESS;
     }
 
+    webcfgStrncpy(ForceSyncGlobalString, value, sizeof(ForceSyncGlobalString));
+    WebcfgDebug("ForceSyncGlobalString Updated to: [%s]\n", ForceSyncGlobalString);
     return WEBCFG_SUCCESS;
 }
 
@@ -1938,20 +1951,15 @@ int set_rbus_ForceSync(char* pString, int *pStatus)
 		if(value !=NULL)
 		{
 			WebcfgDebug("After parseForceSyncJson. value %s transactionId %s\n", value, transactionId);
-			if(strcmp(PRIMARY_SUPPLEMENTARY_BUNDLE, value) == 0) 
+
+			if (strcmp(value, "root") != 0 && strcmp(value, "telemetry") != 0 && strcmp(value, PRIMARY_SUPPLEMENTARY_BUNDLE) != 0)
 			{
-				if(processWebcfgForceSyncValue(value) == WEBCFG_SUCCESS)
-				{
-					printf("[DEBUG] processWebcfgForceSyncValue returned WEBCFG_SUCCESS\n");
-					WebcfgDebug("processWebcfgForceSyncValue returned: %s\n", ForceSyncGlobalString);
-					// if(strcmp(ForceSyncGlobalString, PRIMARY_SUPPLEMENTARY_BUNDLE) == 0)
-					// {
-					// 	set_cloud_forcesync_retry_needed(1);
-					// // }
-					// 
-				}
+				WebcfgDebug("Invalid ForceSync value\n");
+				return 0;
 			}
-			webcfgStrncpy(ForceSync, value, sizeof(ForceSync));
+			processWebcfgForceSyncValue(value);
+			WebcfgDebug("processWebcfgForceSyncValue returned: %s\n", ForceSyncGlobalString);
+			webcfgStrncpy(ForceSync, ForceSyncGlobalString, sizeof(ForceSync));
 		}
 	}
 	WebcfgDebug("set_rbus_ForceSync . ForceSync string is %s\n", ForceSync);
