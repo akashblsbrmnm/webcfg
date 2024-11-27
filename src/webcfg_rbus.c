@@ -1891,6 +1891,39 @@ int parseForceSyncJson(char *jsonpayload, char **forceSyncVal, char **forceSynct
 	return 0;
 }
 
+WEBCFG_STATUS processWebcfgForceSyncValue(char *value)
+{
+    if (!value || *value == '\0')
+    {
+        printf("Invalid ForceSync value: [%s]\n", value ? value : "NULL");
+        return WEBCFG_FAILURE;
+    }
+
+    if (strcmp(value, "root") == 0)
+    {
+        set_force_sync_root_needed(true);
+        printf("force_sync_root_needed is set to true.\n");
+        return WEBCFG_SUCCESS;
+    }
+    else if (strcmp(value, "telemetry") == 0)
+    {
+        set_force_sync_telemetry_needed(true);
+        printf("force_sync_telemetry_needed is set to true.\n");
+        return WEBCFG_SUCCESS;
+    }
+    else if (strcmp(value, "root,telemetry") == 0)
+    {
+        set_force_sync_root_telemetry_needed(true);
+        printf("force_sync_root_telemetry_needed is set to true.\n");
+        return WEBCFG_SUCCESS;
+    }
+    else
+    {
+        printf("Invalid ForceSync value: [%s]\n", value);
+        return WEBCFG_FAILURE;
+    }
+}
+
 int set_rbus_ForceSync(char* pString, int *pStatus)
 {
     char *transactionId = NULL;
@@ -1913,6 +1946,15 @@ int set_rbus_ForceSync(char* pString, int *pStatus)
 		if(value !=NULL)
 		{
 			WebcfgDebug("After parseForceSyncJson. value %s transactionId %s\n", value, transactionId);
+			if(processWebcfgForceSyncValue(value) == WEBCFG_SUCCESS)
+			{
+				printf("processWebcfgForceSyncValue returned success.\n");
+			}
+			else
+			{
+				WebcfgError("Invalid ForceSync value: %s\n", value);
+				return 0;
+			}
 			webcfgStrncpy(ForceSync, value, sizeof(ForceSync));
 		}
 	}
@@ -1964,6 +2006,13 @@ int set_rbus_ForceSync(char* pString, int *pStatus)
         else if(get_cloud_forcesync_retry_started() == 1)
         {
             WebcfgInfo("Cloud force sync retry is in progress, will retry later.\n");
+            *pStatus = 1;
+            set_cloud_forcesync_retry_needed(1);
+            return 0;
+        }
+		else if(get_force_sync_root_telemetry_started() == 1)
+        {
+            WebcfgInfo("force_sync_root_telemetry retry is in progress, will retry later.\n");
             *pStatus = 1;
             set_cloud_forcesync_retry_needed(1);
             return 0;
