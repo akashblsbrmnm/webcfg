@@ -1891,37 +1891,34 @@ int parseForceSyncJson(char *jsonpayload, char **forceSyncVal, char **forceSynct
 	return 0;
 }
 
-WEBCFG_STATUS processWebcfgForceSyncValue(char *value)
+WEBCFG_STATUS processWebcfgForceSyncBundle(char *value)
 {
     if (!value || *value == '\0')
     {
-        printf("Invalid ForceSync value: [%s]\n", value ? value : "NULL");
+        WebcfgInfo("Invalid ForceSync value: [%s]\n", value ? value : "NULL");
         return WEBCFG_FAILURE;
     }
 
     if (strcmp(value, "root") == 0)
     {
         set_force_sync_root_needed(true);
-        printf("force_sync_root_needed is set to true.\n");
+        WebcfgInfo("force_sync_root_needed is set to true.\n");
         return WEBCFG_SUCCESS;
     }
     else if (strcmp(value, "telemetry") == 0)
     {
         set_force_sync_telemetry_needed(true);
-        printf("force_sync_telemetry_needed is set to true.\n");
+        WebcfgInfo("force_sync_telemetry_needed is set to true.\n");
         return WEBCFG_SUCCESS;
     }
     else if (strcmp(value, "root,telemetry") == 0)
     {
         set_force_sync_root_telemetry_needed(true);
-        printf("force_sync_root_telemetry_needed is set to true.\n");
+        WebcfgInfo("force_sync_root_telemetry_needed is set to true.\n");
         return WEBCFG_SUCCESS;
     }
-    else
-    {
-        printf("Invalid ForceSync value: [%s]\n", value);
-        return WEBCFG_FAILURE;
-    }
+
+    return WEBCFG_FAILURE;
 }
 
 int set_rbus_ForceSync(char* pString, int *pStatus)
@@ -1946,15 +1943,6 @@ int set_rbus_ForceSync(char* pString, int *pStatus)
 		if(value !=NULL)
 		{
 			WebcfgDebug("After parseForceSyncJson. value %s transactionId %s\n", value, transactionId);
-			if(processWebcfgForceSyncValue(value) == WEBCFG_SUCCESS)
-			{
-				printf("processWebcfgForceSyncValue returned success.\n");
-			}
-			else
-			{
-				WebcfgError("Invalid ForceSync value: %s\n", value);
-				return 0;
-			}
 			webcfgStrncpy(ForceSync, value, sizeof(ForceSync));
 		}
 	}
@@ -1968,6 +1956,13 @@ int set_rbus_ForceSync(char* pString, int *pStatus)
 
     if((ForceSync[0] !='\0') && (strlen(ForceSync)>0))
     {
+		if(strcmp(ForceSync, "root") == 0 || strcmp(ForceSync, "telemetry") == 0 || strcmp(ForceSync, "root,telemetry") == 0)
+		{
+			if(processWebcfgForceSyncBundle(ForceSync) == WEBCFG_SUCCESS)
+			{
+				WebcfgInfo("processWebcfgForceSyncBundle returned success.\n");
+			}
+		}
 	if(!get_webcfgReady())
         {
             WebcfgInfo("Webconfig is not ready to process requests, Ignoring this request.\n");

@@ -82,7 +82,6 @@ static int g_webcfg_forcedsync_started = 0;
 
 static int g_cloud_forcesync_retry_needed = 0;
 static int g_cloud_forcesync_retry_started = 0;
-
 static bool force_sync_root_needed = false;
 static bool force_sync_telemetry_needed = false;
 static bool force_sync_root_telemetry_needed = false;
@@ -210,7 +209,7 @@ void *WebConfigMultipartTask(void *status)
 				WebcfgDebug("reset cloud_forcesync_retry_started\n");
 				set_cloud_forcesync_retry_started(0);
 			}
-			if (force_sync_bundle_count == 1 && get_force_sync_root_telemetry_started())
+			if (force_sync_bundle_count == 2 && get_force_sync_root_telemetry_started())
 			{
 				force_sync_bundle_count = 0;
 				WebcfgDebug("reset force_sync_root_telemetry_started\n");
@@ -273,8 +272,7 @@ void *WebConfigMultipartTask(void *status)
 
 		retry_flag = get_doc_fail();
 		WebcfgDebug("The retry flag value is %d\n", retry_flag);
-		retry_flag = 0; // FOR TESTING
-
+		retry_flag = 0; // FOR_TESTING
 		if ( retry_flag == 0)
 		{
 		//To disable supplementary sync for RDKV platforms
@@ -353,7 +351,7 @@ void *WebConfigMultipartTask(void *status)
 			}
 			char *ForceSyncDoc = NULL;
 			char* ForceSyncTransID = NULL;
-
+			
 			if (get_force_sync_root_telemetry_needed() == 1)
 			{
 				set_force_sync_root_telemetry_started(1);
@@ -361,32 +359,36 @@ void *WebConfigMultipartTask(void *status)
 				if (force_sync_bundle_count == 0)
 				{
 					ForceSyncDoc = strdup("root");
-					force_sync_bundle_count = 1;
-					// set_cloud_forcesync_retry_needed set for telemetry
-					set_cloud_forcesync_retry_needed(1);
+					int status = 1;
+					setForceSync(ForceSyncDoc, "", &status);
+					force_sync_bundle_count++;
+						// set_cloud_forcesync_retry_needed set for telemetry
+						set_cloud_forcesync_retry_needed(1);
 				}
 				else if (force_sync_bundle_count == 1)
 				{
 					ForceSyncDoc = strdup("telemetry");
-					// reset force_sync_root_telemetry_needed after processing telemetry
-					set_force_sync_root_telemetry_needed(0);
+					int status = 1;
+					setForceSync(ForceSyncDoc, "", &status); // 1 for in-progress
+					force_sync_bundle_count++;
+						// reset force_sync_root_telemetry_needed after processing telemetry
+						set_force_sync_root_telemetry_needed(0);
 				}
 			}
 			else if (get_force_sync_root_needed() == 1)
 			{
 				ForceSyncDoc = strdup("root");
-				// reset force_sync_root_needed
 				set_force_sync_root_needed(0);
 			}
 			else if (get_force_sync_telemetry_needed() == 1)
 			{
-				ForceSyncDoc = "telemetry";
-				// reset force_sync_telemetry_needed
+				ForceSyncDoc = strdup("telemetry");
 				set_force_sync_telemetry_needed(0);
 			}
-
-			// Identify ForceSync based on docname
+			
 			getForceSync(&ForceSyncDoc, &ForceSyncTransID);
+			
+			WebcfgInfo("ForceSync value in main thread , after getForceSync is: %s\n", ForceSyncDoc);
 			if(ForceSyncDoc !=NULL && ForceSyncTransID !=NULL)
 			{
 				WebcfgInfo("ForceSyncDoc %s ForceSyncTransID. %s\n", ForceSyncDoc, ForceSyncTransID);
