@@ -212,7 +212,7 @@ void *WebConfigMultipartTask(void *status)
 			if (force_sync_bundle_count == 2 && get_force_sync_root_telemetry_started())
 			{
 				force_sync_bundle_count = 0;
-				WebcfgDebug("reset force_sync_root_telemetry_started\n");
+				WebcfgInfo("reset force_sync_root_telemetry_started\n");
 				set_force_sync_root_telemetry_started(0);
 			}
 		}
@@ -272,7 +272,7 @@ void *WebConfigMultipartTask(void *status)
 
 		retry_flag = get_doc_fail();
 		WebcfgDebug("The retry flag value is %d\n", retry_flag);
-		retry_flag = 0; // FOR_TESTING
+
 		if ( retry_flag == 0)
 		{
 		//To disable supplementary sync for RDKV platforms
