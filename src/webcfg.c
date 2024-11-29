@@ -358,7 +358,7 @@ void *WebConfigMultipartTask(void *status)
 
 				if (force_sync_bundle_count == 0)
 				{
-					ForceSyncDoc = strdup("root");
+					webcfgStrncpy(ForceSyncDoc, "root", sizeof(ForceSyncDoc));
 					int status = 1;
 					setForceSync(ForceSyncDoc, "", &status);
 					force_sync_bundle_count++;
@@ -367,7 +367,7 @@ void *WebConfigMultipartTask(void *status)
 				}
 				else if (force_sync_bundle_count == 1)
 				{
-					ForceSyncDoc = strdup("telemetry");
+					webcfgStrncpy(ForceSyncDoc, "telemetry", sizeof(ForceSyncDoc));
 					int status = 1;
 					setForceSync(ForceSyncDoc, "", &status); // 1 for in-progress
 					force_sync_bundle_count++;
@@ -377,12 +377,14 @@ void *WebConfigMultipartTask(void *status)
 			}
 			else if (get_force_sync_root_needed() == 1)
 			{
-				ForceSyncDoc = strdup("root");
+				webcfgStrncpy(ForceSyncDoc, "root", sizeof(ForceSyncDoc));
+				int status = 1;
+				setForceSync(ForceSyncDoc, "", &status);
 				set_force_sync_root_needed(0);
 			}
 			else if (get_force_sync_telemetry_needed() == 1)
 			{
-				ForceSyncDoc = strdup("telemetry");
+				webcfgStrncpy(ForceSyncDoc, "telemetry", sizeof(ForceSyncDoc));
 				set_force_sync_telemetry_needed(0);
 			}
 			
