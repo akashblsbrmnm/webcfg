@@ -1794,7 +1794,14 @@ void createCurlHeader( struct curl_slist *list, struct curl_slist **header_list,
                 WebcfgDebug("Failed to get systemReadyTime\n");
         }
 
-	getForceSync(&ForceSyncDoc, &syncTransID);
+	if(get_force_sync_root_telemetry_started() ==1)
+	{
+		WebcfgInfo("Ignoring getForceSync when root_telemetry is started\n");
+	}
+	else
+	{
+		getForceSync(&ForceSyncDoc, &syncTransID);
+	}
 
 	if(syncTransID !=NULL)
 	{
