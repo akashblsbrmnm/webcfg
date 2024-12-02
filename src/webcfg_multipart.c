@@ -1794,9 +1794,9 @@ void createCurlHeader( struct curl_slist *list, struct curl_slist **header_list,
                 WebcfgDebug("Failed to get systemReadyTime\n");
         }
 
-	if(get_force_sync_root_telemetry_started() ==1)
+	if(get_cloud_forcesync_retry_started() ==1)
 	{
-		WebcfgInfo("Ignoring getForceSync when root_telemetry is started\n");
+		WebcfgInfo("Cloud retry in progress, Ignoring cloud received transaction id\n");
 	}
 	else
 	{
