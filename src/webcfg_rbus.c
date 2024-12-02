@@ -1891,7 +1891,7 @@ int parseForceSyncJson(char *jsonpayload, char **forceSyncVal, char **forceSynct
 	return 0;
 }
 
-WEBCFG_STATUS processWebcfgForceSyncBundle(char *value)
+WEBCFG_STATUS processWebcfgForceSync(char *value)
 {
     if (!value || *value == '\0')
     {
@@ -1958,9 +1958,9 @@ int set_rbus_ForceSync(char* pString, int *pStatus)
     {
 		if(strcmp(ForceSync, "root") == 0 || strcmp(ForceSync, "telemetry") == 0 || strcmp(ForceSync, "root,telemetry") == 0)
 		{
-			if(processWebcfgForceSyncBundle(ForceSync) == WEBCFG_SUCCESS)
+			if(processWebcfgForceSync(ForceSync) == WEBCFG_SUCCESS)
 			{
-				WebcfgInfo("processWebcfgForceSyncBundle returned success.\n");
+				WebcfgInfo("processWebcfgForceSync returned success.\n");
 			}
 		}
 	if(!get_webcfgReady())
