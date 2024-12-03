@@ -357,21 +357,18 @@ void *WebConfigMultipartTask(void *status)
 			if (get_force_sync_root_telemetry_needed() == 1)
 			{
 				set_force_sync_root_telemetry_started(1);
+				WEBCFG_FREE(ForceSyncDoc);
 
 				if (force_sync_bundle_count == 0)
 				{
-					webcfgStrncpy(ForceSyncDoc, "root", strlen(ForceSyncDoc));
-					// int status = 1;
-					// setForceSync(ForceSyncDoc, "", &status);
+					ForceSyncDoc=strdup("root");
 					force_sync_bundle_count++;
 						// set_cloud_forcesync_retry_needed set for telemetry
 						set_cloud_forcesync_retry_needed(1);
 				}
 				else if (force_sync_bundle_count == 1)
 				{
-					webcfgStrncpy(ForceSyncDoc, "telemetry", strlen(ForceSyncDoc));
-					// int status = 1;
-					// setForceSync(ForceSyncDoc, "", &status); // 1 for in-progress
+					ForceSyncDoc=strdup("telemetry");
 					force_sync_bundle_count++;
 						// reset force_sync_root_telemetry_needed after processing telemetry
 						set_force_sync_root_telemetry_needed(0);
@@ -379,14 +376,14 @@ void *WebConfigMultipartTask(void *status)
 			}
 			else if (get_force_sync_root_needed() == 1)
 			{
-				webcfgStrncpy(ForceSyncDoc, "root", strlen(ForceSyncDoc));
-				// int status = 1;
-				// setForceSync(ForceSyncDoc, "", &status);
+				WEBCFG_FREE(ForceSyncDoc);
+				ForceSyncDoc=strdup("root");
 				set_force_sync_root_needed(0);
 			}
 			else if (get_force_sync_telemetry_needed() == 1)
 			{
-				webcfgStrncpy(ForceSyncDoc, "telemetry", strlen(ForceSyncDoc));
+				WEBCFG_FREE(ForceSyncDoc);
+				ForceSyncDoc=strdup("telemetry");
 				set_force_sync_telemetry_needed(0);
 			}
 			
