@@ -388,7 +388,15 @@ void *WebConfigMultipartTask(void *status)
 			}
 			
 			
-			WebcfgInfo("ForceSync value in main thread , after getForceSync is: %s\n", ForceSyncDoc);
+			WebcfgInfo("ForceSync value in main thread is: %s\n", ForceSyncDoc);
+			WebcfgInfo("ForceSyncTransID value in main thread is: %s\n", ForceSyncTransID);
+
+			if(ForceSyncTransID == NULL)
+			{
+				WebcfgInfo("Generated new TransID\n");
+				ForceSyncTransID = generate_trans_uuid();
+			}
+
 			if(ForceSyncDoc !=NULL && ForceSyncTransID !=NULL)
 			{
 				WebcfgInfo("ForceSyncDoc %s ForceSyncTransID. %s\n", ForceSyncDoc, ForceSyncTransID);
