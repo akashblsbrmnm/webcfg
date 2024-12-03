@@ -1795,14 +1795,7 @@ void createCurlHeader( struct curl_slist *list, struct curl_slist **header_list,
                 WebcfgDebug("Failed to get systemReadyTime\n");
         }
 
-	if(get_cloud_forcesync_retry_started() ==1)
-	{
-		WebcfgInfo("Cloud retry in progress, Ignoring cloud received transaction id\n");
-	}
-	else
-	{
-		getForceSync(&ForceSyncDoc, &syncTransID);
-	}
+	getForceSync(&ForceSyncDoc, &syncTransID);
 
 	if(syncTransID !=NULL)
 	{
