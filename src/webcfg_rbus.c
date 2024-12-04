@@ -1875,7 +1875,7 @@ int parseForceSyncJson(char *jsonpayload, char **forceSyncVal, char **forceSynct
 			if ((force_sync_transid != NULL) && strlen(force_sync_transid) > 0)
 			{
 				*forceSynctransID = strdup(force_sync_transid);
-				WebcfgDebug("*forceSynctransID value parsed from json is %s\n", *forceSynctransID);
+				WebcfgInfo("*forceSynctransID value parsed from json is %s\n", *forceSynctransID);
 			}
 			else
 			{
@@ -1936,6 +1936,7 @@ int set_rbus_ForceSync(char* pString, int *pStatus)
 	{
 		WebcfgInfo("Received poke request, proceed to parseForceSyncJson\n");
 		parseJsonRet = parseForceSyncJson(pString, &value, &transactionId);
+		WebcfgInfo("After parseForceSyncJson. value: %s  transactionId: %s\n");
 		if(-1 == parseJsonRet)
 		{
 			return 0; // 0 corresponds to indicate error or failure
@@ -1986,6 +1987,7 @@ int set_rbus_ForceSync(char* pString, int *pStatus)
 	else if(strlen(ForceSyncTransID)>0)
         {
             WebcfgInfo("Force sync is already in progress, will retry later.\n");
+			WebcfgInfo("ForceSync to be retried is: [%s]\n", ForceSync);
             *pStatus = 1;
             set_cloud_forcesync_retry_needed(1);
             return 0;

@@ -197,7 +197,14 @@ void *WebConfigMultipartTask(void *status)
 			{
 				WEBCFG_FREE(syncDoc);
 			}
-			setForceSync("", "", 0);
+			if (!get_force_sync_root_telemetry_started || !get_force_sync_root_started || !get_force_sync_telemetry_started)
+			{
+            	setForceSync("", "", 0);
+        	}
+			else
+			{
+            	WebcfgInfo("Skipping setForceSync as a Force Sync is already in progress\n");
+			}
 			set_global_supplementarySync(0);
 			if(get_global_webcfg_forcedsync_started())
 			{
@@ -307,13 +314,13 @@ void *WebConfigMultipartTask(void *status)
 			{
 				WebcfgInfo("Cloud force sync in progress is detected, trigger force sync with cloud.\n");
 			}
-			else if(get_force_sync_root_telemetry_needed() == 1)
-			{
-				WebcfgInfo("force_sync_root_telemetry_needed detected, trigger force sync with cloud.\n");
-			}
 			else
 			{
 				WebcfgInfo("webcfg_forcedsync detected, trigger force sync with cloud.\n");
+			}
+			if(get_force_sync_root_telemetry_needed() == 1)
+			{
+				WebcfgInfo("force_sync_root_telemetry_needed detected, trigger force sync with cloud.\n");
 			}
 			forced_sync = 1;
 			wait_flag = 1;
@@ -339,14 +346,14 @@ void *WebConfigMultipartTask(void *status)
 			{
 				set_global_webcfg_forcedsync_needed(0);
 				set_global_webcfg_forcedsync_started(1);
-				WebcfgDebug("webcfg_forcedsync_needed reset to %d and webcfg_forcedsync_started %d\n", get_global_webcfg_forcedsync_needed(), get_global_webcfg_forcedsync_started());
+				WebcfgInfo("webcfg_forcedsync_needed reset to %d and webcfg_forcedsync_started %d\n", get_global_webcfg_forcedsync_needed(), get_global_webcfg_forcedsync_started());
 			}
 			//cloud_forcesync_retry_needed is set initially whenever cloud force sync is received while another sync is in progress & cloud_forcesync_retry_started is set when actual sync is started once previous sync is completed.
 			if(get_cloud_forcesync_retry_needed())
 			{
 				set_cloud_forcesync_retry_needed(0);
 				set_cloud_forcesync_retry_started(1);
-				WebcfgDebug("cloud_forcesync_retry_needed reset to %d and cloud_forcesync_retry_started set to %d\n",
+				WebcfgInfo("cloud_forcesync_retry_needed reset to %d and cloud_forcesync_retry_started set to %d\n",
 				            get_cloud_forcesync_retry_needed(), get_cloud_forcesync_retry_started());
 			}
 			char *ForceSyncDoc = NULL;
@@ -354,7 +361,7 @@ void *WebConfigMultipartTask(void *status)
 			
 			getForceSync(&ForceSyncDoc, &ForceSyncTransID);
 			
-			if (get_force_sync_root_telemetry_needed() == 1)
+			if (get_force_sync_root_telemetry_needed())
 			{
 				set_force_sync_root_telemetry_started(1);
 				WEBCFG_FREE(ForceSyncDoc);
@@ -364,7 +371,7 @@ void *WebConfigMultipartTask(void *status)
 					ForceSyncDoc=strdup("root");
 					force_sync_bundle_count++;
 						// set_cloud_forcesync_retry_needed set for telemetry
-						set_cloud_forcesync_retry_needed(1);
+						// set_cloud_forcesync_retry_needed(1);
 				}
 				else if (force_sync_bundle_count == 1)
 				{
@@ -372,6 +379,7 @@ void *WebConfigMultipartTask(void *status)
 					force_sync_bundle_count++;
 						// reset force_sync_root_telemetry_needed after processing telemetry
 						set_force_sync_root_telemetry_needed(0);
+						WebcfgInfo("force_sync_root_telemetry_needed reset to %d\n", get_force_sync_root_telemetry_needed());
 				}
 			}
 			else if (get_force_sync_root_needed() == 1)
