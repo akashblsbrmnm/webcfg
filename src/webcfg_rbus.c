@@ -1936,7 +1936,7 @@ int set_rbus_ForceSync(char* pString, int *pStatus)
 	{
 		WebcfgInfo("Received poke request, proceed to parseForceSyncJson\n");
 		parseJsonRet = parseForceSyncJson(pString, &value, &transactionId);
-		WebcfgInfo("After parseForceSyncJson. value: %s  transactionId: %s\n");
+		WebcfgInfo("After parseForceSyncJson. value: %s  transactionId: %s\n", value, transactionId);
 		if(-1 == parseJsonRet)
 		{
 			return 0; // 0 corresponds to indicate error or failure

@@ -197,7 +197,7 @@ void *WebConfigMultipartTask(void *status)
 			{
 				WEBCFG_FREE(syncDoc);
 			}
-			if (!get_force_sync_root_telemetry_started || !get_force_sync_root_started || !get_force_sync_telemetry_started)
+			if (!get_force_sync_root_telemetry_started() || !get_cloud_forcesync_retry_started())
 			{
             	setForceSync("", "", 0);
         	}
