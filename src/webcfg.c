@@ -197,7 +197,7 @@ void *WebConfigMultipartTask(void *status)
 			{
 				WEBCFG_FREE(syncDoc);
 			}
-			WebcfgInfo("The value of force_sync_root_telemetry_started is: %d  and cloud_forcesync_started is: %d\n",
+			WebcfgInfo("The value of force_sync_root_telemetry_needed is: %d  and cloud_forcesync_retry_needed is: %d\n",
 								get_force_sync_root_telemetry_needed(), get_cloud_forcesync_retry_needed());
 			if (!get_force_sync_root_telemetry_needed() || get_cloud_forcesync_retry_needed() != 1)
 			{
