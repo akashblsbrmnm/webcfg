@@ -197,10 +197,10 @@ void *WebConfigMultipartTask(void *status)
 			{
 				WEBCFG_FREE(syncDoc);
 			}
-			if (get_force_sync_root_telemetry_needed() !=1 || get_cloud_forcesync_retry_started() != 1)
+			WebcfgInfo("The value of force_sync_root_telemetry_started is: %d  and cloud_forcesync_started is: %d\n",
+								get_force_sync_root_telemetry_needed(), get_cloud_forcesync_retry_needed());
+			if (!get_force_sync_root_telemetry_needed() || get_cloud_forcesync_retry_needed() != 1)
 			{
-				WebcfgInfo("The value of force_sync_root_telemetry_started is: %s  and cloud_forcesync_started is: %s\n",
-								get_force_sync_root_telemetry_started(), get_cloud_forcesync_retry_started());
 				WebcfgInfo("setForceSync reset\n");
             	setForceSync("", "", 0);
         	}
