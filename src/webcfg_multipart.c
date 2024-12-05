@@ -1814,6 +1814,7 @@ void createCurlHeader( struct curl_slist *list, struct curl_slist **header_list,
 	if(transaction_uuid == NULL)
 	{
 		transaction_uuid = generate_trans_uuid();
+		WebcfgInfo("Generating TransID inside createCurlHeader() function\tTransId = %s\n", transaction_uuid);
 	}
 
 	if(transaction_uuid !=NULL)

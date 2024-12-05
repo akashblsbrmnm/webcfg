@@ -197,8 +197,11 @@ void *WebConfigMultipartTask(void *status)
 			{
 				WEBCFG_FREE(syncDoc);
 			}
-			if (!get_force_sync_root_telemetry_started() || !get_cloud_forcesync_retry_started())
+			if (get_force_sync_root_telemetry_needed() !=1 || get_cloud_forcesync_retry_started() != 1)
 			{
+				WebcfgInfo("The value of force_sync_root_telemetry_started is: %s  and cloud_forcesync_started is: %s\n",
+								get_force_sync_root_telemetry_started(), get_cloud_forcesync_retry_started());
+				WebcfgInfo("setForceSync reset\n");
             	setForceSync("", "", 0);
         	}
 			else
@@ -314,13 +317,13 @@ void *WebConfigMultipartTask(void *status)
 			{
 				WebcfgInfo("Cloud force sync in progress is detected, trigger force sync with cloud.\n");
 			}
+			else if(get_force_sync_root_telemetry_needed() == 1)
+			{
+				WebcfgInfo("force_sync_root_telemetry_needed detected, trigger force sync with cloud.\n");
+			}
 			else
 			{
 				WebcfgInfo("webcfg_forcedsync detected, trigger force sync with cloud.\n");
-			}
-			if(get_force_sync_root_telemetry_needed() == 1)
-			{
-				WebcfgInfo("force_sync_root_telemetry_needed detected, trigger force sync with cloud.\n");
 			}
 			forced_sync = 1;
 			wait_flag = 1;
@@ -371,7 +374,7 @@ void *WebConfigMultipartTask(void *status)
 					ForceSyncDoc=strdup("root");
 					force_sync_bundle_count++;
 						// set_cloud_forcesync_retry_needed set for telemetry
-						// set_cloud_forcesync_retry_needed(1);
+						set_cloud_forcesync_retry_needed(1);
 				}
 				else if (force_sync_bundle_count == 1)
 				{
@@ -401,13 +404,13 @@ void *WebConfigMultipartTask(void *status)
 
 			if(ForceSyncTransID == NULL)
 			{
-				WebcfgInfo("Generated new TransID\n");
 				ForceSyncTransID = generate_trans_uuid();
+				WebcfgInfo("Generated new TransID inside main thread: [%s]\n", ForceSyncTransID);
 			}
 
 			if(ForceSyncDoc !=NULL && ForceSyncTransID !=NULL)
 			{
-				WebcfgInfo("ForceSyncDoc %s ForceSyncTransID. %s\n", ForceSyncDoc, ForceSyncTransID);
+				WebcfgInfo("In Main thread: ForceSyncDoc %s ForceSyncTransID. %s\n", ForceSyncDoc, ForceSyncTransID);
 			}
 			if(ForceSyncTransID !=NULL)
 			{
