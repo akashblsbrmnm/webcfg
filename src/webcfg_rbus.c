@@ -2053,7 +2053,7 @@ int get_rbus_ForceSync(char** pString, char **transactionId )
 	}
 	else
 	{
-		WebcfgDebug("setting NULL to pString and transactionId\n");
+		WebcfgInfo("setting NULL to pString and transactionId\n");
 		*pString = NULL;
 		*transactionId = NULL;
 		return 0;

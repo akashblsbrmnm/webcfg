@@ -197,17 +197,7 @@ void *WebConfigMultipartTask(void *status)
 			{
 				WEBCFG_FREE(syncDoc);
 			}
-			WebcfgInfo("The value of force_sync_root_telemetry_needed is: %d  and cloud_forcesync_retry_needed is: %d\n",
-								get_force_sync_root_telemetry_needed(), get_cloud_forcesync_retry_needed());
-			if (!get_force_sync_root_telemetry_needed() || get_cloud_forcesync_retry_needed() != 1)
-			{
-				WebcfgInfo("setForceSync reset\n");
-            	setForceSync("", "", 0);
-        	}
-			else
-			{
-            	WebcfgInfo("Skipping setForceSync as a Force Sync is already in progress\n");
-			}
+			setForceSync("", "", 0);
 			set_global_supplementarySync(0);
 			if(get_global_webcfg_forcedsync_started())
 			{
@@ -402,38 +392,36 @@ void *WebConfigMultipartTask(void *status)
 			WebcfgInfo("ForceSync value in main thread is: %s\n", ForceSyncDoc);
 			WebcfgInfo("ForceSyncTransID value in main thread is: %s\n", ForceSyncTransID);
 
-			if(ForceSyncTransID == NULL)
-			{
-				ForceSyncTransID = generate_trans_uuid();
-				WebcfgInfo("Generated new TransID inside main thread: [%s]\n", ForceSyncTransID);
-			}
-
 			if(ForceSyncDoc !=NULL && ForceSyncTransID !=NULL)
 			{
 				WebcfgInfo("In Main thread: ForceSyncDoc %s ForceSyncTransID. %s\n", ForceSyncDoc, ForceSyncTransID);
 			}
-			if(ForceSyncTransID !=NULL)
+			
+			if((ForceSyncDoc != NULL) && strlen(ForceSyncDoc)>0)
 			{
-				if((ForceSyncDoc != NULL) && strlen(ForceSyncDoc)>0)
-				{
-					forced_sync = 1;
-					wait_flag = 1;
-					WebcfgDebug("Received signal interrupt to Force Sync\n");
+				forced_sync = 1;
+				wait_flag = 1;
+				WebcfgDebug("Received signal interrupt to Force Sync\n");
 
-					//To check poke string received is supplementary doc or not.
-					if(isSupplementaryDoc(ForceSyncDoc) == WEBCFG_SUCCESS)
-					{
-						WebcfgInfo("Received supplementary poke request for %s\n", ForceSyncDoc);
-						set_global_supplementarySync(1);
-						syncDoc = strdup(ForceSyncDoc);
-						WebcfgDebug("syncDoc is %s\n", syncDoc);
-					}
-					WEBCFG_FREE(ForceSyncDoc);
+				//To check poke string received is supplementary doc or not.
+				if(isSupplementaryDoc(ForceSyncDoc) == WEBCFG_SUCCESS)
+				{
+					WebcfgInfo("Received supplementary poke request for %s\n", ForceSyncDoc);
+					set_global_supplementarySync(1);
+					syncDoc = strdup(ForceSyncDoc);
+					WebcfgDebug("syncDoc is %s\n", syncDoc);
+				}
+				WEBCFG_FREE(ForceSyncDoc);
+				if(ForceSyncTransID !=NULL)
+				{
 					WEBCFG_FREE(ForceSyncTransID);
 				}
-				else
+			}
+			else
+			{
+				WebcfgError("ForceSyncDoc is NULL\n");
+				if(ForceSyncTransID !=NULL)
 				{
-					WebcfgError("ForceSyncDoc is NULL\n");
 					WEBCFG_FREE(ForceSyncTransID);
 				}
 			}

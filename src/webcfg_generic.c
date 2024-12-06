@@ -201,11 +201,11 @@ int getForceSync(char** pString, char **transactionId)
 	{
 		char *str = NULL;
 		char* transID = NULL;
-		WebcfgDebug("B4 get_rbus_ForceSync\n");
+		WebcfgInfo("B4 get_rbus_ForceSync\n");
 		get_rbus_ForceSync(&str, &transID);
 		*pString = str;
 		*transactionId = transID;
-		WebcfgDebug("get_rbus_ForceSync. *pString %s *transactionId %s\n", *pString, *transactionId);
+		WebcfgInfo("get_rbus_ForceSync. *pString %s *transactionId %s\n", *pString, *transactionId);
 	}
 #else
 	UNUSED(pString);
