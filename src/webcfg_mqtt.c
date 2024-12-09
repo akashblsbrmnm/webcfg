@@ -768,6 +768,7 @@ int createMqttHeader(char **header_list)
 
 	if(transaction_uuid == NULL)
 	{
+		WebcfgInfo("Generating new TransId in createCurlHeader function.\n");
 		transaction_uuid = generate_trans_uuid();
 	}
 

@@ -140,4 +140,5 @@ webcfgError_t resetSubdocVersion(char *docname);
 #ifdef WAN_FAILOVER_SUPPORTED
 int subscribeTo_CurrentActiveInterface_Event();
 #endif
+WEBCFG_STATUS processWebcfgForceSync(char *value, char *trans_id);
 #endif

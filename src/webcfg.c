@@ -82,6 +82,14 @@ static int g_webcfg_forcedsync_started = 0;
 
 static int g_cloud_forcesync_retry_needed = 0;
 static int g_cloud_forcesync_retry_started = 0;
+
+static int g_forcesync_primary_retry_needed = 0;
+static int g_forcesync_primary_retry_started = 0;
+static int g_forcesync_supplementary_retry_needed = 0;
+static int g_forcesync_supplementary_retry_started = 0;
+static int g_forcesync_primary_suppl_retry_needed = 0;
+static int g_forcesync_primary_suppl_retry_started = 0;
+static char last_txid[256]={'\0'};
 /*----------------------------------------------------------------------------*/
 /*                             Function Prototypes                            */
 /*----------------------------------------------------------------------------*/
@@ -122,6 +130,7 @@ void *WebConfigMultipartTask(void *status)
 	time_t t;
 	struct timespec ts;
 	Status = (unsigned long)status;
+	int force_sync_bundle_count = 0;
 
 	initWebcfgProperties(WEBCFG_PROPERTIES_FILE);
 
@@ -203,6 +212,22 @@ void *WebConfigMultipartTask(void *status)
 			{
 				WebcfgDebug("reset cloud_forcesync_retry_started\n");
 				set_cloud_forcesync_retry_started(0);
+			}
+			if (get_forcesync_primary_suppl_retry_started() && force_sync_bundle_count == 2)
+			{
+				force_sync_bundle_count = 0;
+				WebcfgInfo("reset force_sync_primary_suppl_retry_started\n");
+				set_forcesync_primary_suppl_retry_started(0);
+			}
+			if(get_forcesync_primary_retry_started())
+			{
+				WebcfgInfo("reset forcesync_primary_retry_started\n");
+				set_forcesync_primary_retry_started(0);
+			}
+			if(get_forcesync_supplementary_retry_started())
+			{
+				WebcfgInfo("reset forcesync_supplementary_retry_started\n");
+				set_forcesync_supplementary_retry_started(0);
 			}
 		}
 
@@ -290,11 +315,29 @@ void *WebConfigMultipartTask(void *status)
 			ts.tv_sec += get_retry_timer();
 			WebcfgDebug("The retry triggers at %s\n", printTime((long long)ts.tv_sec));
 		}
-		if(get_global_webcfg_forcedsync_needed() == 1 || get_cloud_forcesync_retry_needed() == 1)
+		if(get_global_webcfg_forcedsync_needed() == 1 || get_cloud_forcesync_retry_needed() == 1 ||
+		   get_forcesync_primary_suppl_retry_needed() == 1 || get_forcesync_primary_retry_needed() == 1 ||
+		   get_forcesync_supplementary_retry_needed() == 1 || force_sync_bundle_count == 1 )
 		{
 			if(get_cloud_forcesync_retry_needed() == 1)
 			{
 				WebcfgInfo("Cloud force sync in progress is detected, trigger force sync with cloud.\n");
+			}
+			else if(get_forcesync_primary_suppl_retry_needed() == 1)
+			{
+				WebcfgInfo("forcesync_primary_suppl_retry_needed detected, trigger force sync with cloud.\n");
+			}
+			else if(get_forcesync_primary_retry_needed() == 1)
+			{
+				WebcfgInfo("forcesync_primary_retry_needed detected, trigger force sync with cloud.\n");
+			}
+			else if(get_forcesync_supplementary_retry_needed() == 1)
+			{
+				WebcfgInfo("forcesync_supplementary_retry_needed detected, trigger force sync with cloud.\n");
+			}
+			else if(force_sync_bundle_count == 1)
+			{
+				WebcfgInfo("force_sync_bundle_count is 1 detected, trigger force sync with cloud\n");
 			}
 			else
 			{
@@ -336,35 +379,96 @@ void *WebConfigMultipartTask(void *status)
 			}
 			char *ForceSyncDoc = NULL;
 			char* ForceSyncTransID = NULL;
-
-			// Identify ForceSync based on docname
+			
 			getForceSync(&ForceSyncDoc, &ForceSyncTransID);
+			
+			WebcfgInfo("Called getForceSync. ForceSyncDoc: %s, ForceSyncTransID: %s.\n", 
+						(ForceSyncDoc != NULL ? ForceSyncDoc : "NULL"), 
+						(ForceSyncTransID != NULL ? ForceSyncTransID : "NULL"));
+
+			WebcfgInfo("value of get_forcesync_primary_retry_needed(): %d\n", get_forcesync_primary_retry_needed());
+			WebcfgInfo("value of get_forcesync_supplementary_retry_needed(): %d\n", get_forcesync_supplementary_retry_needed());
+			WebcfgInfo("value of get_forcesync_primary_suppl_retry_needed(): %d\n", get_forcesync_primary_suppl_retry_needed());
+
+			if (get_forcesync_primary_suppl_retry_needed() || force_sync_bundle_count == 1)
+			{
+				set_forcesync_primary_suppl_retry_started(1);
+				WEBCFG_FREE(ForceSyncDoc);
+				WebcfgInfo("Bundle case \n");
+				if (force_sync_bundle_count == 0)
+				{
+					set_forcesync_primary_suppl_retry_needed(0);
+					ForceSyncDoc=strdup("root");
+					force_sync_bundle_count++;
+				}
+				else if (force_sync_bundle_count == 1)
+				{
+					ForceSyncDoc=strdup("telemetry");
+					force_sync_bundle_count++;
+					WebcfgInfo("forcesync_primary_suppl_retry_needed reset to %d\n", get_forcesync_primary_suppl_retry_needed());
+				}
+				if(ForceSyncTransID==NULL || strlen(ForceSyncTransID) == 0)
+				{
+					WebcfgInfo("get_last_txid.\n");
+					ForceSyncTransID = strdup(get_last_txid());
+				}
+			}
+			else if (get_forcesync_primary_retry_needed() == 1)
+			{
+				set_forcesync_primary_retry_needed(0);
+				set_forcesync_primary_retry_started(1);
+				WEBCFG_FREE(ForceSyncDoc);
+				ForceSyncDoc=strdup("root");
+				if(ForceSyncTransID==NULL || strlen(ForceSyncTransID) == 0)
+				{
+					WebcfgInfo("get_last_txid.\n");
+					ForceSyncTransID = strdup(get_last_txid());
+				}
+
+			}
+			else if (get_forcesync_supplementary_retry_needed() == 1)
+			{
+				set_forcesync_supplementary_retry_needed(0);
+				set_forcesync_supplementary_retry_started(1);
+				WEBCFG_FREE(ForceSyncDoc);
+				ForceSyncDoc=strdup("telemetry");
+				if(ForceSyncTransID==NULL || strlen(ForceSyncTransID) == 0)
+				{
+					WebcfgInfo("get_last_txid.\n");
+					ForceSyncTransID = strdup(get_last_txid());
+				}
+			}
+			
 			if(ForceSyncDoc !=NULL && ForceSyncTransID !=NULL)
 			{
 				WebcfgInfo("ForceSyncDoc %s ForceSyncTransID. %s\n", ForceSyncDoc, ForceSyncTransID);
 			}
-			if(ForceSyncTransID !=NULL)
+			
+			if((ForceSyncDoc != NULL) && strlen(ForceSyncDoc)>0)
 			{
-				if((ForceSyncDoc != NULL) && strlen(ForceSyncDoc)>0)
-				{
-					forced_sync = 1;
-					wait_flag = 1;
-					WebcfgDebug("Received signal interrupt to Force Sync\n");
+				forced_sync = 1;
+				wait_flag = 1;
+				WebcfgInfo("Received signal interrupt to Force Sync\n");
 
-					//To check poke string received is supplementary doc or not.
-					if(isSupplementaryDoc(ForceSyncDoc) == WEBCFG_SUCCESS)
-					{
-						WebcfgInfo("Received supplementary poke request for %s\n", ForceSyncDoc);
-						set_global_supplementarySync(1);
-						syncDoc = strdup(ForceSyncDoc);
-						WebcfgDebug("syncDoc is %s\n", syncDoc);
-					}
-					WEBCFG_FREE(ForceSyncDoc);
+				//To check poke string received is supplementary doc or not.
+				if(isSupplementaryDoc(ForceSyncDoc) == WEBCFG_SUCCESS)
+				{
+					WebcfgInfo("Received supplementary poke request for %s\n", ForceSyncDoc);
+					set_global_supplementarySync(1);
+					syncDoc = strdup(ForceSyncDoc);
+					WebcfgDebug("syncDoc is %s\n", syncDoc);
+				}
+				WEBCFG_FREE(ForceSyncDoc);
+				if(ForceSyncTransID !=NULL)
+				{
 					WEBCFG_FREE(ForceSyncTransID);
 				}
-				else
+			}
+			else
+			{
+				WebcfgError("ForceSyncDoc is NULL\n");
+				if(ForceSyncTransID !=NULL)
 				{
-					WebcfgError("ForceSyncDoc is NULL\n");
 					WEBCFG_FREE(ForceSyncTransID);
 				}
 			}
@@ -446,6 +550,12 @@ void *WebConfigMultipartTask(void *status)
 	set_global_webcfg_forcedsync_started(0);
 	set_cloud_forcesync_retry_needed(0);
 	set_cloud_forcesync_retry_started(0);
+	set_forcesync_primary_retry_needed(0);
+	set_forcesync_primary_retry_started(0);
+	set_forcesync_supplementary_retry_needed(0);
+	set_forcesync_supplementary_retry_started(0);
+	set_forcesync_primary_suppl_retry_needed(0);
+	set_forcesync_primary_suppl_retry_started(0);
 #ifdef FEATURE_SUPPORT_AKER
 	set_send_aker_flag(false);
 #endif
@@ -585,6 +695,80 @@ int get_cloud_forcesync_retry_started()
 {
     return g_cloud_forcesync_retry_started;
 }
+
+int get_forcesync_primary_retry_needed()
+{
+    return g_forcesync_primary_retry_needed;
+}
+
+void set_forcesync_primary_retry_needed(int value)
+{
+    g_forcesync_primary_retry_needed = value;
+}
+
+int get_forcesync_primary_retry_started()
+{
+    return g_forcesync_primary_retry_started;
+}
+
+void set_forcesync_primary_retry_started(int value)
+{
+    g_forcesync_primary_retry_started = value;
+}
+
+int get_forcesync_supplementary_retry_needed()
+{
+    return g_forcesync_supplementary_retry_needed;
+}
+
+void set_forcesync_supplementary_retry_needed(int value)
+{
+    g_forcesync_supplementary_retry_needed = value;
+}
+
+int get_forcesync_supplementary_retry_started()
+{
+    return g_forcesync_supplementary_retry_started;
+}
+
+void set_forcesync_supplementary_retry_started(int value)
+{
+    g_forcesync_supplementary_retry_started = value;
+}
+
+int get_forcesync_primary_suppl_retry_needed()
+{
+    return g_forcesync_primary_suppl_retry_needed;
+}
+
+void set_forcesync_primary_suppl_retry_needed(int value)
+{
+    g_forcesync_primary_suppl_retry_needed = value;
+}
+
+int get_forcesync_primary_suppl_retry_started()
+{
+    return g_forcesync_primary_suppl_retry_started;
+}
+
+void set_forcesync_primary_suppl_retry_started(int value)
+{
+    g_forcesync_primary_suppl_retry_started = value;
+}
+
+const char* get_last_txid()
+{
+    return last_txid;
+}
+
+void set_last_txid(const char* value)
+{
+    if (value != NULL && strlen(value) > 0)
+    {
+		webcfgStrncpy(last_txid, value, sizeof(last_txid));
+    }
+}
+
 /*----------------------------------------------------------------------------*/
 /*                             Internal functions                             */
 /*----------------------------------------------------------------------------*/

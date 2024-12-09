@@ -1794,18 +1794,27 @@ void createCurlHeader( struct curl_slist *list, struct curl_slist **header_list,
         {
                 WebcfgDebug("Failed to get systemReadyTime\n");
         }
-
-	getForceSync(&ForceSyncDoc, &syncTransID);
+	
+	if(get_cloud_forcesync_retry_started() == 1 || get_forcesync_primary_retry_started() == 1 || get_forcesync_supplementary_retry_started() == 1 || get_forcesync_primary_suppl_retry_started() ==1)
+	{
+		WebcfgInfo("get_last_txid for retry scenario.\n");
+		syncTransID = strdup(get_last_txid());
+	}
+	else
+	{
+		getForceSync(&ForceSyncDoc, &syncTransID);
+	}
 
 	if(syncTransID !=NULL)
 	{
+		WebcfgInfo("syncTransID: [%s]\n", syncTransID);
+		if (strlen(syncTransID)>0)
+		{
+			WebcfgInfo("updating transaction_uuid with force syncTransID\n");
+			transaction_uuid = strdup(syncTransID);
+		}
 		if(ForceSyncDoc !=NULL)
 		{
-			if (strlen(syncTransID)>0)
-			{
-				WebcfgInfo("updating transaction_uuid with force syncTransID\n");
-				transaction_uuid = strdup(syncTransID);
-			}
 			WEBCFG_FREE(ForceSyncDoc);
 		}
 		WEBCFG_FREE(syncTransID);
@@ -1814,6 +1823,7 @@ void createCurlHeader( struct curl_slist *list, struct curl_slist **header_list,
 	if(transaction_uuid == NULL)
 	{
 		transaction_uuid = generate_trans_uuid();
+		WebcfgInfo("Generating TransID inside createCurlHeader() function\tTransId = %s\n", transaction_uuid);
 	}
 
 	if(transaction_uuid !=NULL)
