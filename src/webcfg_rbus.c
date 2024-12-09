@@ -1891,6 +1891,43 @@ int parseForceSyncJson(char *jsonpayload, char **forceSyncVal, char **forceSynct
 	return 0;
 }
 
+WEBCFG_STATUS processWebcfgForceSync(char *value)
+{
+    if (!value || *value == '\0')
+    {
+        WebcfgInfo("Invalid ForceSync value: [%s]\n", value ? value : "NULL");
+        return WEBCFG_FAILURE;
+    }
+
+	if(get_forcesync_primary_suppl_retry_needed() == 1 && !get_forcesync_primary_suppl_retry_started())
+	{
+		WebcfgInfo("Bundle needed is detected, Ignoring ForceSync for [%s]\n", value);
+		return WEBCFG_SUCCESS;
+	}
+    if (strcmp(value, "root") == 0)
+    {
+		set_forcesync_primary_retry_needed(1);
+        WebcfgInfo("forcesync_primary_retry_needed is set to true.\n");
+        return WEBCFG_SUCCESS;
+    }
+    else if (strcmp(value, "telemetry") == 0)
+    {
+        set_forcesync_supplementary_retry_needed(1);
+        WebcfgInfo("forcesync_supplementary_retry_needed is set to true.\n");
+        return WEBCFG_SUCCESS;
+    }
+    else if (strcmp(value, "root,telemetry") == 0)
+    {
+		set_forcesync_primary_retry_needed(0);
+		set_forcesync_supplementary_retry_needed(0);
+        set_forcesync_primary_suppl_retry_needed(1);
+        WebcfgInfo("forcesync_primary_suppl_retry_needed is set to true.\n");
+        return WEBCFG_SUCCESS;
+    }
+
+    return WEBCFG_FAILURE;
+}
+
 int set_rbus_ForceSync(char* pString, int *pStatus)
 {
     char *transactionId = NULL;
@@ -1916,7 +1953,7 @@ int set_rbus_ForceSync(char* pString, int *pStatus)
 			webcfgStrncpy(ForceSync, value, sizeof(ForceSync));
 		}
 	}
-	WebcfgDebug("set_rbus_ForceSync . ForceSync string is %s\n", ForceSync);
+	WebcfgInfo("set_rbus_ForceSync . ForceSync string is %s\n", ForceSync);
        
         if(value !=NULL)
 	{
@@ -1926,6 +1963,18 @@ int set_rbus_ForceSync(char* pString, int *pStatus)
 
     if((ForceSync[0] !='\0') && (strlen(ForceSync)>0))
     {
+		if(strcmp(ForceSync, "root") == 0 || strcmp(ForceSync, "telemetry") == 0 || strcmp(ForceSync, "root,telemetry") == 0)
+		{
+			if(processWebcfgForceSync(ForceSync) == WEBCFG_SUCCESS)
+			{
+				WebcfgDebug("processWebcfgForceSync returned success.\n");
+			}
+			else
+			{
+				WebcfgDebug("processWebcfgForceSync failed.\n");
+				return 0;
+			}
+		}
 	if(!get_webcfgReady())
         {
             WebcfgInfo("Webconfig is not ready to process requests, Ignoring this request.\n");
@@ -1949,6 +1998,7 @@ int set_rbus_ForceSync(char* pString, int *pStatus)
 	else if(strlen(ForceSyncTransID)>0)
         {
             WebcfgInfo("Force sync is already in progress, will retry later.\n");
+			WebcfgInfo("ForceSync to be retried is: [%s]\n", ForceSync);
             *pStatus = 1;
             set_cloud_forcesync_retry_needed(1);
             return 0;
@@ -1964,6 +2014,27 @@ int set_rbus_ForceSync(char* pString, int *pStatus)
         else if(get_cloud_forcesync_retry_started() == 1)
         {
             WebcfgInfo("Cloud force sync retry is in progress, will retry later.\n");
+            *pStatus = 1;
+            set_cloud_forcesync_retry_needed(1);
+            return 0;
+        }
+		else if(get_forcesync_primary_retry_started() == 1)
+		{
+			WebcfgInfo("forcesync_primary retry is in progress, will retry later.\n");
+            *pStatus = 1;
+            set_cloud_forcesync_retry_needed(1);
+            return 0;
+		}
+		else if(get_forcesync_supplementary_retry_started() == 1)
+		{
+			WebcfgInfo("forcesync_supplementary retry is in progress, will retry later.\n");
+            *pStatus = 1;
+            set_cloud_forcesync_retry_needed(1);
+            return 0;
+		}
+		else if(get_forcesync_primary_suppl_retry_started() == 1)
+        {
+            WebcfgInfo("force_sync_primary_supplementary retry is in progress, will retry later.\n");
             *pStatus = 1;
             set_cloud_forcesync_retry_needed(1);
             return 0;

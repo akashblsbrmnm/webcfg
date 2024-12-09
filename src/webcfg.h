@@ -44,6 +44,7 @@ extern int numLoops;
 #define FOREVER()   numLoops--
 #endif
 
+#define PRIMARY_SUPPLEMENTARY_BUNDLE "root,telemetry"
 /*----------------------------------------------------------------------------*/
 /*                               Data Structures                              */
 /*----------------------------------------------------------------------------*/
@@ -116,4 +117,17 @@ void set_cloud_forcesync_retry_needed(int value);
 int get_cloud_forcesync_retry_needed();
 void set_cloud_forcesync_retry_started(int value);
 int get_cloud_forcesync_retry_started();
+
+int get_forcesync_primary_retry_needed();
+void set_forcesync_primary_retry_needed(int value);
+int get_forcesync_primary_retry_started();
+void set_forcesync_primary_retry_started(int value);
+int get_forcesync_supplementary_retry_needed();
+void set_forcesync_supplementary_retry_needed(int value);
+int get_forcesync_supplementary_retry_started();
+void set_forcesync_supplementary_retry_started(int value);
+int get_forcesync_primary_suppl_retry_needed();
+void set_forcesync_primary_suppl_retry_needed(int value);
+int get_forcesync_primary_suppl_retry_started();
+void set_forcesync_primary_suppl_retry_started(int value);
 #endif
