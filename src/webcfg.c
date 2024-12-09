@@ -82,6 +82,10 @@ static int g_webcfg_forcedsync_started = 0;
 
 static int g_cloud_forcesync_retry_needed = 0;
 static int g_cloud_forcesync_retry_started = 0;
+static bool force_sync_root_needed = false;
+static bool force_sync_telemetry_needed = false;
+static bool force_sync_root_telemetry_needed = false;
+static bool force_sync_root_telemetry_started = false;
 /*----------------------------------------------------------------------------*/
 /*                             Function Prototypes                            */
 /*----------------------------------------------------------------------------*/
@@ -122,6 +126,7 @@ void *WebConfigMultipartTask(void *status)
 	time_t t;
 	struct timespec ts;
 	Status = (unsigned long)status;
+	int force_sync_bundle_count = 0;
 
 	initWebcfgProperties(WEBCFG_PROPERTIES_FILE);
 
@@ -203,6 +208,12 @@ void *WebConfigMultipartTask(void *status)
 			{
 				WebcfgDebug("reset cloud_forcesync_retry_started\n");
 				set_cloud_forcesync_retry_started(0);
+			}
+			if (force_sync_bundle_count == 2 && get_force_sync_root_telemetry_started())
+			{
+				force_sync_bundle_count = 0;
+				WebcfgDebug("reset force_sync_root_telemetry_started\n");
+				set_force_sync_root_telemetry_started(0);
 			}
 		}
 
@@ -290,11 +301,15 @@ void *WebConfigMultipartTask(void *status)
 			ts.tv_sec += get_retry_timer();
 			WebcfgDebug("The retry triggers at %s\n", printTime((long long)ts.tv_sec));
 		}
-		if(get_global_webcfg_forcedsync_needed() == 1 || get_cloud_forcesync_retry_needed() == 1)
+		if(get_global_webcfg_forcedsync_needed() == 1 || get_cloud_forcesync_retry_needed() == 1 || get_force_sync_root_telemetry_needed() == 1)
 		{
 			if(get_cloud_forcesync_retry_needed() == 1)
 			{
 				WebcfgInfo("Cloud force sync in progress is detected, trigger force sync with cloud.\n");
+			}
+			else if(get_force_sync_root_telemetry_needed() == 1)
+			{
+				WebcfgInfo("force_sync_root_telemetry_needed detected, trigger force sync with cloud.\n");
 			}
 			else
 			{
@@ -336,35 +351,77 @@ void *WebConfigMultipartTask(void *status)
 			}
 			char *ForceSyncDoc = NULL;
 			char* ForceSyncTransID = NULL;
-
-			// Identify ForceSync based on docname
+			
 			getForceSync(&ForceSyncDoc, &ForceSyncTransID);
+			
+			if (get_force_sync_root_telemetry_needed())
+			{
+				set_force_sync_root_telemetry_started(1);
+				WEBCFG_FREE(ForceSyncDoc);
+
+				if (force_sync_bundle_count == 0)
+				{
+					ForceSyncDoc=strdup("root");
+					force_sync_bundle_count++;
+						// set_cloud_forcesync_retry_needed set for telemetry
+						set_cloud_forcesync_retry_needed(1);
+				}
+				else if (force_sync_bundle_count == 1)
+				{
+					ForceSyncDoc=strdup("telemetry");
+					force_sync_bundle_count++;
+						// reset force_sync_root_telemetry_needed after processing telemetry
+						set_force_sync_root_telemetry_needed(0);
+						WebcfgInfo("force_sync_root_telemetry_needed reset to %d\n", get_force_sync_root_telemetry_needed());
+				}
+			}
+			else if (get_force_sync_root_needed() == 1)
+			{
+				WEBCFG_FREE(ForceSyncDoc);
+				ForceSyncDoc=strdup("root");
+				set_force_sync_root_needed(0);
+			}
+			else if (get_force_sync_telemetry_needed() == 1)
+			{
+				WEBCFG_FREE(ForceSyncDoc);
+				ForceSyncDoc=strdup("telemetry");
+				set_force_sync_telemetry_needed(0);
+			}
+			
+			
+			WebcfgInfo("ForceSync value in main thread is: %s\n", ForceSyncDoc);
+			WebcfgInfo("ForceSyncTransID value in main thread is: %s\n", ForceSyncTransID);
+
 			if(ForceSyncDoc !=NULL && ForceSyncTransID !=NULL)
 			{
 				WebcfgInfo("ForceSyncDoc %s ForceSyncTransID. %s\n", ForceSyncDoc, ForceSyncTransID);
 			}
-			if(ForceSyncTransID !=NULL)
+			
+			if((ForceSyncDoc != NULL) && strlen(ForceSyncDoc)>0)
 			{
-				if((ForceSyncDoc != NULL) && strlen(ForceSyncDoc)>0)
-				{
-					forced_sync = 1;
-					wait_flag = 1;
-					WebcfgDebug("Received signal interrupt to Force Sync\n");
+				forced_sync = 1;
+				wait_flag = 1;
+				WebcfgDebug("Received signal interrupt to Force Sync\n");
 
-					//To check poke string received is supplementary doc or not.
-					if(isSupplementaryDoc(ForceSyncDoc) == WEBCFG_SUCCESS)
-					{
-						WebcfgInfo("Received supplementary poke request for %s\n", ForceSyncDoc);
-						set_global_supplementarySync(1);
-						syncDoc = strdup(ForceSyncDoc);
-						WebcfgDebug("syncDoc is %s\n", syncDoc);
-					}
-					WEBCFG_FREE(ForceSyncDoc);
+				//To check poke string received is supplementary doc or not.
+				if(isSupplementaryDoc(ForceSyncDoc) == WEBCFG_SUCCESS)
+				{
+					WebcfgInfo("Received supplementary poke request for %s\n", ForceSyncDoc);
+					set_global_supplementarySync(1);
+					syncDoc = strdup(ForceSyncDoc);
+					WebcfgDebug("syncDoc is %s\n", syncDoc);
+				}
+				WEBCFG_FREE(ForceSyncDoc);
+				if(ForceSyncTransID !=NULL)
+				{
 					WEBCFG_FREE(ForceSyncTransID);
 				}
-				else
+			}
+			else
+			{
+				WebcfgError("ForceSyncDoc is NULL\n");
+				if(ForceSyncTransID !=NULL)
 				{
-					WebcfgError("ForceSyncDoc is NULL\n");
 					WEBCFG_FREE(ForceSyncTransID);
 				}
 			}
@@ -585,6 +642,47 @@ int get_cloud_forcesync_retry_started()
 {
     return g_cloud_forcesync_retry_started;
 }
+
+bool get_force_sync_root_needed()
+{
+    return force_sync_root_needed;
+}
+
+void set_force_sync_root_needed(bool value)
+{
+    force_sync_root_needed = value;
+}
+
+bool get_force_sync_telemetry_needed()
+{
+    return force_sync_telemetry_needed;
+}
+
+void set_force_sync_telemetry_needed(bool value)
+{
+    force_sync_telemetry_needed = value;
+}
+
+bool get_force_sync_root_telemetry_needed()
+{
+    return force_sync_root_telemetry_needed;
+}
+
+void set_force_sync_root_telemetry_needed(bool value)
+{
+    force_sync_root_telemetry_needed = value;
+}
+
+bool get_force_sync_root_telemetry_started()
+{
+	return force_sync_root_telemetry_started;
+}
+
+void set_force_sync_root_telemetry_started(bool value)
+{
+	force_sync_root_telemetry_started = value;
+}
+
 /*----------------------------------------------------------------------------*/
 /*                             Internal functions                             */
 /*----------------------------------------------------------------------------*/
