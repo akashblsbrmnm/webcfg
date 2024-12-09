@@ -118,12 +118,16 @@ int get_cloud_forcesync_retry_needed();
 void set_cloud_forcesync_retry_started(int value);
 int get_cloud_forcesync_retry_started();
 
-bool get_force_sync_root_needed();
-void set_force_sync_root_needed(bool value);
-bool get_force_sync_telemetry_needed();
-void set_force_sync_telemetry_needed(bool value);
-bool get_force_sync_root_telemetry_needed();
-void set_force_sync_root_telemetry_needed(bool value);
-bool get_force_sync_root_telemetry_started();
-void set_force_sync_root_telemetry_started(bool value);
+int get_forcesync_primary_retry_needed();
+void set_forcesync_primary_retry_needed(int value);
+int get_forcesync_primary_retry_started();
+void set_forcesync_primary_retry_started(int value);
+int get_forcesync_supplementary_retry_needed();
+void set_forcesync_supplementary_retry_needed(int value);
+int get_forcesync_supplementary_retry_started();
+void set_forcesync_supplementary_retry_started(int value);
+int get_forcesync_primary_suppl_retry_needed();
+void set_forcesync_primary_suppl_retry_needed(int value);
+int get_forcesync_primary_suppl_retry_started();
+void set_forcesync_primary_suppl_retry_started(int value);
 #endif

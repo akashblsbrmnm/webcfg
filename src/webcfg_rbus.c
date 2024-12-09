@@ -1901,20 +1901,20 @@ WEBCFG_STATUS processWebcfgForceSync(char *value)
 
     if (strcmp(value, "root") == 0)
     {
-        set_force_sync_root_needed(true);
-        WebcfgInfo("force_sync_root_needed is set to true.\n");
+		set_forcesync_primary_retry_needed(1);
+        WebcfgInfo("forcesync_primary_retry_needed is set to true.\n");
         return WEBCFG_SUCCESS;
     }
     else if (strcmp(value, "telemetry") == 0)
     {
-        set_force_sync_telemetry_needed(true);
-        WebcfgInfo("force_sync_telemetry_needed is set to true.\n");
+        set_forcesync_supplementary_retry_needed(1);
+        WebcfgInfo("forcesync_supplementary_retry_needed is set to true.\n");
         return WEBCFG_SUCCESS;
     }
     else if (strcmp(value, "root,telemetry") == 0)
     {
-        set_force_sync_root_telemetry_needed(true);
-        WebcfgInfo("force_sync_root_telemetry_needed is set to true.\n");
+        set_forcesync_primary_suppl_retry_needed(1);
+        WebcfgInfo("forcesync_primary_suppl_retry_needed is set to true.\n");
         return WEBCFG_SUCCESS;
     }
 
@@ -2006,9 +2006,23 @@ int set_rbus_ForceSync(char* pString, int *pStatus)
             set_cloud_forcesync_retry_needed(1);
             return 0;
         }
-		else if(get_force_sync_root_telemetry_started() == 1)
+		else if(get_forcesync_primary_retry_started())
+		{
+			WebcfgInfo("forcesync_primary retry is in progress, will retry later.\n");
+            *pStatus = 1;
+            set_cloud_forcesync_retry_needed(1);
+            return 0;
+		}
+		else if(get_forcesync_supplementary_retry_started())
+		{
+			WebcfgInfo("forcesync_supplementary retry is in progress, will retry later.\n");
+            *pStatus = 1;
+            set_cloud_forcesync_retry_needed(1);
+            return 0;
+		}
+		else if(get_forcesync_primary_suppl_retry_started() == 1)
         {
-            WebcfgInfo("force_sync_root_telemetry retry is in progress, will retry later.\n");
+            WebcfgInfo("force_sync_primary_supplementary retry is in progress, will retry later.\n");
             *pStatus = 1;
             set_cloud_forcesync_retry_needed(1);
             return 0;
