@@ -76,6 +76,9 @@ typedef struct
     rbusValueType_t type;
 } rbusParamVal_t;
 
+static ForceSyncMsg *ForceSyncMsgQ = NULL;
+pthread_mutex_t ForceSyncMsgQ_mut=PTHREAD_MUTEX_INITIALIZER;
+
 bool get_global_isRbus(void)
 {
     return isRbus;
@@ -133,6 +136,7 @@ WEBCFG_STATUS webconfigRbusInit(const char *pComponentName)
 		return WEBCFG_FAILURE;
 	}
 	WebcfgInfo("webconfigRbusInit is success. ret is %d\n", ret);
+	ForceSyncMsgQ = NULL;
 	return WEBCFG_SUCCESS;
 }
 
@@ -1896,6 +1900,7 @@ int set_rbus_ForceSync(char* pString, int *pStatus)
     char *transactionId = NULL;
     char *value = NULL;
     int parseJsonRet = 0;
+	int ret = -1;
 
     memset( ForceSync, 0, sizeof( ForceSync ));
 
@@ -1912,7 +1917,7 @@ int set_rbus_ForceSync(char* pString, int *pStatus)
 		}
 		if(value !=NULL)
 		{
-			WebcfgDebug("After parseForceSyncJson. value %s transactionId %s\n", value, transactionId);
+			WebcfgInfo("After parseForceSyncJson. value %s transactionId %s\n", value, transactionId);
 			webcfgStrncpy(ForceSync, value, sizeof(ForceSync));
 		}
 	}
@@ -1926,6 +1931,53 @@ int set_rbus_ForceSync(char* pString, int *pStatus)
 
     if((ForceSync[0] !='\0') && (strlen(ForceSync)>0))
     {
+		if(transactionId == NULL)
+		{
+			transactionId = generate_trans_uuid();
+			WebcfgInfo("ForceSync transaction Id NULL, generated uuid %s\n",transactionId);
+		}
+
+		WebcfgInfo("set_rbus_ForceSync :mutex lock in producer thread %s\n",ForceSync);
+		if((strcmp(ForceSync,"root,telemetry") == 0) || (strcmp(ForceSync,"telemetry,root") == 0))
+		{
+			char* word1 = strtok(ForceSync, ",");
+			char* word2 = strtok(NULL, ",");
+			WebcfgInfo("Received %s and %s bundle ForceSync, delete existing entries from queue and add new entries\n",word1,word2);
+			deleteForceSyncMsgQueue();
+
+			// Add "root" to the force sync message queue
+			ret = addForceSyncMsgToQueue(word1,transactionId);
+			if(ret)
+			{
+				WebcfgError("addForceSyncMsgToQueue for %s failed in bundle case\n", word1);
+				*pStatus = 2;
+				return 0;				
+			}
+			// Append "telemetry" to the force sync message queue
+			ret	= addForceSyncMsgToQueue(word2,transactionId);
+			if(ret)
+			{
+				WebcfgError("addForceSyncMsgToQueue for %s failed in bundle case\n", word2);
+				*pStatus = 2;
+				return 0;
+			}
+		}
+		else		
+		{
+			int found = updateForceSyncMsgQueue(transactionId);
+			if(found == 0)
+			{
+				ret = addForceSyncMsgToQueue(ForceSync,transactionId);
+				if(ret)
+				{
+					WebcfgError("addForceSyncMsgToQueue failed\n");
+					*pStatus = 2;
+					return 0;					
+				}
+			}
+		}
+
+		WebcfgInfo("set_rbus_ForceSync : mutex unlock in producer thread\n");
 	if(!get_webcfgReady())
         {
             WebcfgInfo("Webconfig is not ready to process requests, Ignoring this request.\n");
@@ -1997,23 +2049,167 @@ int set_rbus_ForceSync(char* pString, int *pStatus)
     return 1;
 }
 
+void DisplayQueue() {
+    ForceSyncMsg* current = ForceSyncMsgQ;
+    WebcfgDebug("/************DisplayQueue************/\n");
+    // Traverse the list and print each node
+    while (current != NULL) {
+		WebcfgDebug("ForceSyncVal:%s -> ForceSyncTransID:%s\n",
+           current->ForceSyncVal ? current->ForceSyncVal : "NULL", 
+           current->ForceSyncTransID ? current->ForceSyncTransID : "NULL");
+        current = current->next;
+    }
+    WebcfgDebug("/************************************/\n");
+}
+
 int get_rbus_ForceSync(char** pString, char **transactionId )
 {
-
-	if(((ForceSync)[0] != '\0') && strlen(ForceSync)>0)
+	WebcfgInfo("get_rbus_ForceSync: mutex lock\n");
+	pthread_mutex_lock (&ForceSyncMsgQ_mut);
+	if(ForceSyncMsgQ != NULL)
 	{
-		*pString = strdup(ForceSync);
-		*transactionId = strdup(ForceSyncTransID);
+		ForceSyncMsg* current = ForceSyncMsgQ;
+		if(current!=NULL)
+		{
+			if(current->ForceSyncVal != NULL)
+			{
+				*pString = strdup(current->ForceSyncVal);
+			}
+			else
+			{
+				WebcfgError("ForceSyncVal is NULL in Queue.\n");
+			}
+			if(current->ForceSyncTransID != NULL)
+			{
+				*transactionId = strdup(current->ForceSyncTransID);
+			}
+			else
+			{
+				WebcfgError("ForceSyncTransID is NULL in Queue.\n");
+			}
+			ForceSyncMsgQ = ForceSyncMsgQ->next;
+			WEBCFG_FREE(current->ForceSyncVal);
+			WEBCFG_FREE(current->ForceSyncTransID);
+			WEBCFG_FREE(current);
+		}
+		pthread_mutex_unlock (&ForceSyncMsgQ_mut);
+		WebcfgInfo("get_rbus_ForceSync: mutex unlock\n");
+		WebcfgInfo("get_rbus_ForceSync: pString %s. transactionId %s.\n", 
+					(pString && *pString) ? *pString : "NULL",
+					(transactionId && *transactionId) ? *transactionId : "NULL");		
+		if(ForceSyncMsgQ != NULL)
+		{
+			set_cloud_forcesync_retry_needed(1);
+			 WebcfgInfo("get_rbus_ForceSync: ForceSyncMsgQ is not empty, set_cloud_forcesync_retry_needed(1)\n");
+		}
 	}
 	else
 	{
-		WebcfgDebug("setting NULL to pString and transactionId\n");
+		pthread_mutex_unlock (&ForceSyncMsgQ_mut);
+		WebcfgInfo("get_rbus_ForceSync: mutex unlock\n");		
+		WebcfgInfo("setting NULL to pString and transactionId\n");
 		*pString = NULL;
 		*transactionId = NULL;
 		return 0;
 	}
 	WebcfgDebug("*transactionId is %s\n",*transactionId);
 	return 1;
+}
+
+void deleteForceSyncMsgQueue()
+{
+	WebcfgDebug("Inside deleteForceSyncMsgQueue()\n");
+	pthread_mutex_lock (&ForceSyncMsgQ_mut);
+    ForceSyncMsg* current = ForceSyncMsgQ;
+    ForceSyncMsg* next_node = NULL;
+
+    // Traverse and free each node
+    while (current != NULL) {
+        next_node = current->next; // Save the next node
+		WEBCFG_FREE(current->ForceSyncVal);
+		WEBCFG_FREE(current->ForceSyncTransID);
+        WEBCFG_FREE(current);            // Free the current node
+        current = next_node;      // Move to the next node
+    }
+
+	ForceSyncMsgQ = NULL;
+	pthread_mutex_unlock (&ForceSyncMsgQ_mut);
+}
+
+int updateForceSyncMsgQueue(char* trans_id)
+{
+	int found = 0;
+	pthread_mutex_lock (&ForceSyncMsgQ_mut);
+    ForceSyncMsg *temp = ForceSyncMsgQ;
+    while (temp) {
+        if ((temp->ForceSyncVal) && (strcmp(temp->ForceSyncVal,ForceSync) == 0)) {
+			WebcfgInfo("%s is already in queue,Old transactionId %s, Updating transaction ID %s\n", ForceSync, temp->ForceSyncTransID ? temp->ForceSyncTransID : "NULL", trans_id ? trans_id : "NULL");
+			WEBCFG_FREE(temp->ForceSyncTransID);
+			temp->ForceSyncTransID = trans_id ? strdup(trans_id) : NULL;
+            found = 1;
+            break;
+        }
+        temp = temp->next;
+    }
+	pthread_mutex_unlock (&ForceSyncMsgQ_mut);
+    if (!found) {
+        WebcfgDebug("Value %s not found in the Queue.\n", ForceSync);
+    }
+	return found;
+}
+
+int addForceSyncMsgToQueue(char *ForceSync, char *ForceSyncTransID)
+{
+	ForceSyncMsg *message = NULL;
+
+	message = (ForceSyncMsg *)malloc(sizeof(ForceSyncMsg));
+
+	if(message)
+	{
+		memset(message, 0, sizeof(ForceSyncMsg));
+		if(ForceSync!=NULL)
+		{
+			message->ForceSyncVal = strdup(ForceSync);
+		}
+		else
+		{
+			WebcfgError("ForceSync is NULL\n");
+		}
+		if(ForceSyncTransID!=NULL)
+		{
+			message->ForceSyncTransID = strdup(ForceSyncTransID);
+		}
+		else
+		{
+			WebcfgError("ForceSyncTransID is NULL\n");
+		}
+
+		message->next = NULL;
+		if(ForceSyncMsgQ == NULL)
+		{
+			ForceSyncMsgQ = message;
+			WebcfgInfo("addForceSyncMsgToQueue : Producer added ForceSyncVal\n");
+		}
+		else
+		{
+			pthread_mutex_lock (&ForceSyncMsgQ_mut);
+			ForceSyncMsg *temp = ForceSyncMsgQ;
+			while(temp->next)
+			{
+				temp = temp->next;
+			}
+			temp->next = message;
+			WebcfgDebug("addForceSyncMsgToQueue : Producer append ForceSyncVal\n");
+			pthread_mutex_unlock (&ForceSyncMsgQ_mut);
+		}
+	}
+	else
+	{
+		//Memory allocation failed
+		WebcfgError("Memory allocation is failed\n");
+		return WEBCFG_FAILURE;
+	}
+	return WEBCFG_SUCCESS;
 }
 
 void sendNotification_rbus(char *payload, char *source, char *destination)
