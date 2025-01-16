@@ -252,7 +252,7 @@ void *WebConfigMultipartTask(void *status)
 		clock_gettime(CLOCK_REALTIME, &ts);
 
 		retry_flag = get_doc_fail();
-		WebcfgDebug("The retry flag value is %d\n", retry_flag);
+		WebcfgInfo("The retry flag value is %d\n", retry_flag);
 
 		if ( retry_flag == 0)
 		{
@@ -270,7 +270,7 @@ void *WebConfigMultipartTask(void *status)
 		#else
 			maintenance_doc_sync = 0;
 			maintenance_count = 0;
-			WebcfgDebug("maintenance_count is %d\n", maintenance_count);
+			WebcfgInfo("maintenance_count is %d\n", maintenance_count);
 		#endif
 		}
 		else
@@ -280,7 +280,7 @@ void *WebConfigMultipartTask(void *status)
 				set_retry_timer(retrySyncSeconds());
 			}
 			ts.tv_sec += get_retry_timer();
-			WebcfgDebug("The retry triggers at %s\n", printTime((long long)ts.tv_sec));
+			WebcfgInfo("The retry triggers at %s\n", printTime((long long)ts.tv_sec));
 		}
 		if(get_global_webcfg_forcedsync_needed() == 1)
 		{
@@ -291,15 +291,16 @@ void *WebConfigMultipartTask(void *status)
 		}
 		else if(retry_flag == 1 || maintenance_doc_sync == 1)
 		{
-			WebcfgDebug("B4 sync_condition pthread_cond_timedwait\n");
+			WebcfgInfo("B4 sync_condition pthread_cond_timedwait ... The timestamp is %s\n", printTime((long long)ts.tv_sec));
 			set_maintenanceSync(false);
 			WebcfgInfo("reset maintenanceSync to false\n");
 			rv = pthread_cond_timedwait(&sync_condition, &sync_mutex, &ts);
-			WebcfgDebug("The retry flag value is %d\n", get_doc_fail());
-			WebcfgDebug("The value of rv %d\n", rv);
+			WebcfgInfo("The retry flag value is %d\n", get_doc_fail());
+			WebcfgInfo("The value of rv %d\n", rv);
 		}
 		else 
 		{
+			WebcfgInfo("B4 sync_condition pthread_cond_wait\n");
 			rv = pthread_cond_wait(&sync_condition, &sync_mutex);
 		}
 		if(!rv && !g_shutdown)
@@ -350,13 +351,14 @@ void *WebConfigMultipartTask(void *status)
 		}
 		else if(rv == ETIMEDOUT && !g_shutdown)
 		{
+			WebcfgInfo("rv has reached ETIMEDOUT\n");
 			if(get_doc_fail() == 1)
 			{
 				set_doc_fail(0);
 				set_retry_timer(900);
 				set_global_retry_timestamp(0);
 				failedDocsRetry();
-				WebcfgDebug("After the failedDocsRetry\n");
+				WebcfgInfo("After the failedDocsRetry\n");
 			}
 			else
 			{
@@ -371,6 +373,11 @@ void *WebConfigMultipartTask(void *status)
 			WebcfgInfo("Received signal interrupt to RFC disable. g_shutdown is %d, proceeding to kill webconfig thread\n", g_shutdown);
 			pthread_mutex_unlock (&sync_mutex);
 			break;
+		}
+		else
+		{
+			WebcfgInfo("The value of rv is %d\n", rv);
+			WebcfgInfo("sync_condition pthread_cond_wait failed\n");
 		}
 		
 		pthread_mutex_unlock(&sync_mutex);
