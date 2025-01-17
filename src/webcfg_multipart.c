@@ -908,8 +908,9 @@ WEBCFG_STATUS processMsgpackSubdoc(char *transaction_id)
 						{
 							subdocStatus = isSubDocSupported(mp->name_space);
 							WebcfgDebug("ccspStatus is %d\n", ccspStatus);
-							if(ccspStatus == 204 && subdocStatus != WEBCFG_SUCCESS)
+							if(subdocStatus != WEBCFG_SUCCESS)
 							{
+								WebcfgInfo("Rejecting unsupported subdoc\n");
 								snprintf(result,MAX_VALUE_LEN,"doc_unsupported:%s", errDetails);
 							}
 							else
@@ -924,7 +925,7 @@ WEBCFG_STATUS processMsgpackSubdoc(char *transaction_id)
 								updateRetryTimeDiff(expiry_time);
 								snprintf(result,MAX_VALUE_LEN,"failed_retrying:%s", errDetails);
 							}
-							WebcfgDebug("The result is %s\n",result);
+							WebcfgInfo("The result is %s\n",result);
 							updateTmpList(subdoc_node, mp->name_space, mp->etag, "failed", result, ccspStatus, 0, 1);
 							if(subdoc_node !=NULL && subdoc_node->cloud_trans_id !=NULL)
 							{

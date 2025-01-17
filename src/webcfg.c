@@ -397,6 +397,10 @@ void *WebConfigMultipartTask(void *status)
 			pthread_mutex_unlock (&sync_mutex);
 			break;
 		}
+		else
+		{
+			WebcfgError("sync_condition pthread_cond wait failed with value of rv: [%d]\n", rv);
+		}
 		
 		pthread_mutex_unlock(&sync_mutex);
 
