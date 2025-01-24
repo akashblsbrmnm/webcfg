@@ -920,7 +920,7 @@ WEBCFG_STATUS processMsgpackSubdoc(char *transaction_id)
 								set_doc_fail(1);
 
 								updateFailureTimeStamp(subdoc_node, mp->name_space, expiry_time);
-								WebcfgDebug("The retry_timer is %d and timeout generated is %lld\n", get_retry_timer(), expiry_time);
+								WebcfgInfo("The retry_timer is %d and timeout generated is %lld\n", get_retry_timer(), expiry_time);
 								//To get the exact time diff for retry from present time.
 								updateRetryTimeDiff(expiry_time);
 								snprintf(result,MAX_VALUE_LEN,"failed_retrying:%s", errDetails);
@@ -948,7 +948,7 @@ WEBCFG_STATUS processMsgpackSubdoc(char *transaction_id)
 								break;
 							}
 
-							WebcfgDebug("the retry flag value is %d\n", get_doc_fail());
+							WebcfgInfo("the retry flag value is %d\n", get_doc_fail());
 						}
 						else
 						{
@@ -2511,11 +2511,11 @@ void failedDocsRetry()
 				WebcfgInfo("Retrying for subdoc %s error_code %lu\n", temp->name, (long)temp->error_code);
 				if(retryMultipartSubdoc(temp, temp->name) == WEBCFG_SUCCESS)
 				{
-					WebcfgDebug("The subdoc %s set is success\n", temp->name);
+					WebcfgInfo("The subdoc %s set is success\n", temp->name);
 				}
 				else
 				{
-					WebcfgDebug("The subdoc %s set is failed\n", temp->name);
+					WebcfgInfo("The subdoc %s set is failed\n", temp->name);
 				}
 			}
 			else
@@ -2524,13 +2524,13 @@ void failedDocsRetry()
 
 				//To get the exact time diff for retry from present time do the below
 				time_diff = updateRetryTimeDiff(temp->retry_timestamp);
-				WebcfgDebug("The docname is %s and diff is %d retry time stamp is %s\n", temp->name, time_diff, printTime(temp->retry_timestamp));
+				WebcfgInfo("The docname is %s and diff is %d retry time stamp is %s\n", temp->name, time_diff, printTime(temp->retry_timestamp));
 				set_doc_fail(1);
 			}
 		}
 		else
 		{
-			WebcfgDebug("Retry skipped for %s (%s)\n",temp->name,temp->error_details);
+			WebcfgInfo("Retry skipped for %s (%s)\n",temp->name,temp->error_details);
 		}
 		temp= temp->next;
 	}
