@@ -155,20 +155,33 @@ void execute_token_script(char *token, char *name, size_t len, char *mac, char *
 {
     FILE* out = NULL, *file = NULL;
     char command[MAX_BUF_SIZE] = {'\0'};
-    if(strlen(name)>0)
+
+    if(name && strlen(name)>0)
     {
         file = fopen(name, "r");
         if(file)
         {
-            snprintf(command,sizeof(command),"%s %s %s",name,serNum,mac);
+            if (snprintf(command,sizeof(command),"%s %s %s",name,serNum ? serNum : "",mac ? mac : "") >= (int)sizeof(command))
+            {
+                WebcfgError("execute_token_script: Command buffer overflow\n");
+                fclose(file);
+                return;
+            }
             WebcfgInfo("execute_token_script command is initiated\n");
             out = popen(command, "r");
             WebcfgInfo("execute_token_script command is executed\n");
             if(out)
             {
-                fgets(token, len, out);
+                if(fgets(token, len, out) == NULL)
+                {
+                    WebcfgError("execute_token_script: Failed to read output\n");
+                }
                 pclose(out);
                 WebcfgInfo("execute_token_script command is success\n");
+            }
+            else
+            {
+                WebcfgError("execute_token_script: Failed to execute command\n");
             }
             fclose(file);
         }
