@@ -216,7 +216,7 @@ WEBCFG_STATUS webcfg_http_request(char **configData, int r_count, int status, lo
 	struct token_data data;
 	data.size = 0;
 	void * dataVal = NULL;
-	char syncURL[MAX_URL_LENGTH]={'\0'};
+	// char syncURL[MAX_URL_LENGTH]={'\0'};
 	char docname_upper[64]={'\0'};
 
 	curl = curl_easy_init();
@@ -318,6 +318,8 @@ WEBCFG_STATUS webcfg_http_request(char **configData, int r_count, int status, lo
 		}
 		WebcfgDebug("ConfigURL fetched is %s\n", webConfigURL);
 
+		/* 
+		REMOVE SUBDOCS INFORMATION FROM URL QUERY PARAMETER
 		if(!get_global_supplementarySync())
 		{
 			if(strlen(docList) > 0)
@@ -329,6 +331,7 @@ WEBCFG_STATUS webcfg_http_request(char **configData, int r_count, int status, lo
 				webConfigURL =strdup( syncURL);
 			}
 		}
+		*/
 		if(webConfigURL !=NULL)
 		{
 			WebcfgInfo("Webconfig root ConfigURL is %s\n", webConfigURL);
@@ -1536,6 +1539,7 @@ void refreshConfigVersionList(char *versionsList, int http_status, char *docsLis
 void createCurlHeader( struct curl_slist *list, struct curl_slist **header_list, int status, char ** trans_uuid, char **subdocList)
 {
 	char *version_header = NULL;
+	char *subdoc_header = NULL;
 	char *auth_header = NULL;
 	char *status_header=NULL;
 	char *schema_header=NULL;
@@ -1588,7 +1592,17 @@ void createCurlHeader( struct curl_slist *list, struct curl_slist **header_list,
 			*subdocList = strdup(docList);
 			list = curl_slist_append(list, version_header);
 			WEBCFG_FREE(version_header);
+
+			subdoc_header = (char *)malloc(sizeof(char) * MAX_SUBDOC_HEADER_SIZE);
+			if (subdoc_header != NULL)
+			{
+				snprintf(subdoc_header, MAX_BUF_SIZE, "X-Subdocs-Applied: %s", docList);
+				list = curl_slist_append(list, subdoc_header);
+				WebcfgInfo("Applied Subdoc header formed %s\n", subdoc_header);
+				WEBCFG_FREE(subdoc_header);
+			}
 		}
+
 		WebcfgInfo("Post none retain header formed POST-NONE-RETAIN: true\n");
 		list = curl_slist_append(list, "POST-NONE-RETAIN: true");		
 	}
