@@ -621,6 +621,10 @@ void processWebconfgSync(int status, char* docname)
 		{
 			break;
 		}
+		else
+		{
+			WebcfgError("testUtility execution failed. Proceeding to get webConfigData from cloud\n");
+		}
 		#endif
 
 		if(retry_count >3)
@@ -834,11 +838,22 @@ int testUtility()
 
 	if(readFromFile(TEST_FILE_LOCATION, &data, &test_dataSize) == 1)
 	{
+		WebcfgInfo("TEST_FILE_LOCATION = %s\n", TEST_FILE_LOCATION);
+		if(data != NULL && test_dataSize == 0)
+		{
+			WebcfgError("Test file is empty\n");
+			return 0;
+		}
 		set_g_testfile(1);
 		WebcfgInfo("Using Test file \n");
 
 		char * data_body = malloc(sizeof(char) * test_dataSize+1);
-		memset(data_body, 0, sizeof(char) * test_dataSize+1);
+		if( NULL == data_body )
+		{
+			WebcfgError("Memory allocation for data_body failed.\n");
+			return 0;
+		}
+		memset(data_body, 0, sizeof(char) * (test_dataSize + 1));
 		data_body = memcpy(data_body, data, test_dataSize+1);
 		data_body[test_dataSize] = '\0';
 		char *ptr_count = data_body;
@@ -903,10 +918,6 @@ int testUtility()
 			if(test_file_status == WEBCFG_SUCCESS)
 			{
 				WebcfgInfo("Test webConfigData applied successfully\n");
-			}
-			else
-			{
-				WebcfgError("Failed to apply Test root webConfigData received from server\n");
 			}
 		}
 		else
