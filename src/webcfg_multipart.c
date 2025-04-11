@@ -239,7 +239,7 @@ WEBCFG_STATUS webcfg_http_request(char **configData, int r_count, int status, lo
 		{
 			//loadInitURLFromFile(&webConfigURL);
 			Get_Webconfig_URL(configURL);
-			WebcfgDebug("primary sync url fetched is %s\n", configURL);
+			WebcfgInfo("primary sync url fetched is %s\n", configURL);
 		}
 		else
 		{
@@ -265,6 +265,8 @@ WEBCFG_STATUS webcfg_http_request(char **configData, int r_count, int status, lo
 		{
 			//Replace {mac} string from default init url with actual deviceMAC
 			WebcfgDebug("replaceMacWord to actual device mac\n");
+			const char *deviceMac = get_deviceMAC();
+			WebcfgInfo("Device MAC from get_deviceMAC(): %s\n", deviceMac);
 			webConfigURL = replaceMacWord(configURL, c, get_deviceMAC());
 			//Check the url is having empty mac or actual devicemac
 			checkValidURL(&webConfigURL);
@@ -2252,17 +2254,19 @@ WEBCFG_STATUS print_tmp_doc_list(size_t mp_count)
 
 void checkValidURL(char **s) {
 
+	WebcfgInfo("checkValidURL() input: %s\n", *s);
     char modified_url[256] = {0};
     int maxRetryTime = 31;
     int backoffRetryTime = 0;
     int c = 2;
 
     char *start = strstr(*s, "/device/");
+	const char *actualMac = get_deviceMAC();
     if (start != NULL) {
         start += 8;
 
         // If the next character is '/', it means MAC address is missing
-        if (*start == '/' || strncmp(start, "000000000000", 12) == 0) {
+        if (*start == '/' || strncmp(start, "000000000000", 12) == 0 || (actualMac && strlen(start) >= 12 && strncmp(start, actualMac, 12) != 0)) {
         
             WebcfgError("Device MAC EMPTY\n");
             strncpy(modified_url, *s, start - *s);
@@ -2274,6 +2278,7 @@ void checkValidURL(char **s) {
                     backoffRetryTime = (int)pow(2, c) - 1;
                 }        
                 const char *mac = get_deviceMAC();
+				WebcfgInfo("Device MAC from get_deviceMAC(): %s\n", mac);
                 if (mac != NULL && strncmp(mac, "000000000000", 12) != 0)
                 {
                     WebcfgDebug("Mac fetched is %s\n", mac);
@@ -2301,7 +2306,7 @@ void checkValidURL(char **s) {
         else
         {
             // If the MAC address is not empty
-            WebcfgDebug("URL is having valid MAC Address.\n");
+            WebcfgInfo("URL is having valid MAC Address.\n");
         }
     }
 }
