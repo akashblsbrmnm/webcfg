@@ -57,6 +57,7 @@
 #define CCSP_CRASH_STATUS_CODE      192
 #define MAX_PARAMETERNAME_LEN		4096
 #define SUBDOC_TAG_COUNT            4
+#define DEFAULT_MAC             "001a2b112233"
 /*----------------------------------------------------------------------------*/
 /*                               Data Structures                              */
 /*----------------------------------------------------------------------------*/
@@ -2254,27 +2255,27 @@ void checkValidURL(char **s) {
 
     char modified_url[256] = {0};
     int maxRetryTime = 31;
-    int backoffRetryTime = 0;
-    int c = 2;
+    int c = 2
+	int backoffRetryTime = 0;
 
     char *start = strstr(*s, "/device/");
     if (start != NULL) {
         start += 8;
 
         // If the next character is '/', it means MAC address is missing
-        if (*start == '/' || strncmp(start, "000000000000", 12) == 0) {
+        if (*start == '/' || strncmp(start, "000000000000", 12) == 0 || strncmp(start, DEFAULT_MAC, 12) == 0) {
         
-            WebcfgError("Device MAC EMPTY\n");
+            WebcfgError("Device MAC is DEFAULT or EMPTY\n");
             strncpy(modified_url, *s, start - *s);
             modified_url[start - *s] = '\0';
             
             while (1) {
                 if (backoffRetryTime <= maxRetryTime) 
                 {
-                    backoffRetryTime = (int)pow(2, c) - 1;
+					backoffRetryTime = (1 << c) - 1;
                 }        
                 const char *mac = get_deviceMAC();
-                if (mac != NULL && strncmp(mac, "000000000000", 12) != 0)
+                if (mac != NULL && strncmp(mac, "000000000000", 12) != 0 && strncmp(mac, DEFAULT_MAC, 12) != 0)
                 {
                     WebcfgDebug("Mac fetched is %s\n", mac);
                     strncat(modified_url, mac, sizeof(modified_url) - strlen(modified_url) - 1);
