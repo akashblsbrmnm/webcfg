@@ -418,6 +418,9 @@ endif (FEATURE_SUPPORT_AKER)
 
 add_executable(test_cmocka_multipart ${SOURCES})
 
+# Enable unit testing mode to use mock implementations
+target_compile_definitions(test_cmocka_multipart PRIVATE ENABLE_UNIT_TESTING)
+
 target_link_libraries (test_cmocka_multipart -lcmocka -lcunit -lmsgpackc -lpthread  -lm -luuid -ltrower-base64 -lwdmp-c -lcimplog -lcjson -lwrp-c -lcurl )
 
 if (WEBCONFIG_BIN_SUPPORT)

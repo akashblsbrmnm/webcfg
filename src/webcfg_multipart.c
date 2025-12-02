@@ -2331,6 +2331,7 @@ void checkValidURL(char **s) {
     }
 }
 
+#ifndef ENABLE_UNIT_TESTING
 char *replaceMacWord(const char *s, const char *macW, const char *deviceMACW)
 {
     if (!s || !macW)
@@ -2386,6 +2387,7 @@ char *replaceMacWord(const char *s, const char *macW, const char *deviceMACW)
 	result[i] = '\0';
 	return result;
 }
+#endif /* ENABLE_UNIT_TESTING */
 
 void reqParam_destroy( int paramCnt, param_t *reqObj )
 {

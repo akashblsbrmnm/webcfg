@@ -44,8 +44,15 @@ typedef void CURL;
 #undef curl_easy_setopt
 #undef curl_easy_getinfo
 
+// Flag to get empty config URL
+static int flag_empty_config_url = 0;
+
 int Get_Webconfig_URL(char *pString)
 {
+    if (flag_empty_config_url) {
+        pString[0] = '\0';
+        return 0;
+    }
     // Set a non-empty value for configURL
     strcpy(pString, "http://example.com/config.xml");
     return 0; 
@@ -111,9 +118,29 @@ void curl_easy_cleanup(CURL *easy)
 }
 
 int Get_Supplementary_URL(char *name, char *pString) {
+    if (flag_empty_config_url) {
+        pString[0] = '\0';
+        return 0;
+    }
     // Set a non-empty value for configURL
     strcpy(pString, "http://example.com/config.xml");
     return 0; 
+}
+
+// Mock implementation of replaceMacWord for testing
+static int flag_replaceMacWord_failure = 0;
+
+char *replaceMacWord(const char *s, const char *macW, const char *deviceMACW) {
+    if (flag_replaceMacWord_failure) {
+        WebcfgError("Test: Simulating malloc failure in replaceMacWord\n");
+        return NULL;
+    }
+
+    // Simple test implementation to return a copy
+    if (!s || !macW) {
+        return NULL;
+    }
+    return strdup(s);
 }
 
 void test_webcfg_http_request_curl_init_fail()
@@ -223,12 +250,69 @@ void test_webcfg_http_request_supp_sync()
     assert_int_equal (result, 0);
 }
 
+void test_webcfg_http_request_empty_config_url()
+{
+    char *config = NULL;
+    int r_count = 1;
+    int status = 0;
+    long code = 0;
+    char *transaction_id = NULL;
+    char contentType[64] = {0};
+    size_t dataSize = 0;
+    char docname[64] = {0};
+
+    set_global_supplementarySync(0);
+
+    // Enable flag to get empty config URL
+    flag_empty_config_url = 1;
+
+    will_return (curl_easy_init, 1);
+    expect_function_calls (curl_easy_init, 1);
+
+    WEBCFG_STATUS result = webcfg_http_request(&config, r_count, status, &code, &transaction_id, contentType, &dataSize, docname);
+
+    assert_int_equal (result, 1);
+
+    // Reset flag
+    flag_empty_config_url = 0;
+}
+
+void test_webcfg_http_request_replaceMacWord_fail()
+{
+    char *config = NULL;
+    int r_count = 1;
+    int status = 0;
+    long code = 0;
+    char *transaction_id = NULL;
+    char contentType[64] = {0};
+    size_t dataSize = 0;
+    char docname[64] = {0};
+
+    set_global_supplementarySync(0);
+
+    // Enable flag to get replaceMacWord failure
+    flag_replaceMacWord_failure = 1;
+
+    will_return (curl_easy_init, 1);
+    expect_function_calls (curl_easy_init, 1);
+
+    WEBCFG_STATUS result = webcfg_http_request(&config, r_count, status, &code, &transaction_id, contentType, &dataSize, docname);
+
+    WebcfgInfo("The result is %d", result);
+    assert_int_equal (result, 1); // Should return WEBCFG_FAILURE
+
+    // Reset flag
+    flag_replaceMacWord_failure = 0;
+}
+
 int main(void)
 {
     const struct CMUnitTest tests[] = {
 	    cmocka_unit_test(test_webcfg_http_request_curl_init_fail),
         cmocka_unit_test(test_webcfg_http_request_curl_init_success),
-        cmocka_unit_test(test_webcfg_http_request_supp_sync)
+        cmocka_unit_test(test_webcfg_http_request_supp_sync),
+        cmocka_unit_test(test_webcfg_http_request_replaceMacWord_fail),
+        cmocka_unit_test(test_webcfg_http_request_empty_config_url)
     };
 
     return cmocka_run_group_tests(tests, NULL, NULL);
